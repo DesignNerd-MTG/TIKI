@@ -34,18 +34,18 @@ describe("portal appearance presets", () => {
     assert.equal(resolveTheme(undefined), defaultTheme);
     assert.equal(isThemePreset("night"), true);
     assert.equal(isThemePreset("custom-css"), false);
-    assert.deepEqual(themePresets[0].swatches, ["#1f1b18", "#352e29", "#c9684f", "#1b1816"]);
+    assert.deepEqual(themePresets[0].swatches, ["#2b211b", "#5a4030", "#f06b3d", "#43b8c4"]);
   });
 
   it("keeps text readable on every theme canvas", () => {
     for (const preset of themePresets) {
-      const [canvas, , , control] = preset.swatches;
+      const [canvas] = preset.swatches;
       assert.ok(
         contrastRatio(canvas, preset.text) >= 4.5,
         `${preset.label} must meet WCAG AA canvas contrast`,
       );
       assert.ok(
-        contrastRatio(control, preset.text) >= 4.5,
+        contrastRatio(preset.control, preset.text) >= 4.5,
         `${preset.label} must meet WCAG AA field contrast`,
       );
       for (const swatch of preset.swatches) {
