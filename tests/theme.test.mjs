@@ -70,6 +70,9 @@ describe("portal appearance presets", () => {
     assert.match(css, /\.form-field input:not\(\[type="checkbox"\]\)[\s\S]*background: var\(--control-fill\)/);
     assert.match(css, /\.theme-live-preview/);
     assert.match(css, /\[data-theme\][\s\S]*--slate: var\(--text-secondary\)/);
+    assert.match(css, /\[data-theme\][^}]*--napkin-accent: var\(--gold\)/);
+    assert.match(css, /\[data-theme\][^}]*--napkin-accent-soft: var\(--gold-soft\)/);
+    assert.match(css, /\[data-theme\][^}]*--napkin-line: var\(--border-soft\)/);
     assert.match(css, /--ambient-warm:/);
     assert.match(css, /\.workspace[\s\S]*radial-gradient[\s\S]*var\(--ambient-cool\)/);
     assert.match(css, /\[data-theme="night"\][^}]*--text-secondary: #ffffff/);

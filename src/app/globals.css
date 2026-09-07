@@ -370,6 +370,9 @@
   --teal: var(--accent);
   --teal-dark: var(--accent-link);
   --teal-soft: var(--accent-soft);
+  --napkin-accent: var(--gold);
+  --napkin-accent-soft: var(--gold-soft);
+  --napkin-line: var(--border-soft);
   --sidebar-text: var(--text-primary);
   --sidebar-muted: color-mix(in srgb, var(--sidebar-text) 64%, transparent);
   --sidebar-faint: color-mix(in srgb, var(--sidebar-text) 38%, transparent);
