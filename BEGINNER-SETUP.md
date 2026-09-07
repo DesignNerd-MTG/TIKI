@@ -1,117 +1,158 @@
 # T.I.K.I. beginner setup
 
-This is the shortest route from “downloaded code” to “Mike can sign in.” Do the sections in order.
+This is the current command-by-command path for Mike. The GitHub repository, local project folder, Supabase `TIKI` project, and initial database migration already exist.
 
-## Part A — See the interface locally
+## Part A — Start T.I.K.I. locally
 
-Open a terminal in this folder and run:
+Open PowerShell and run:
 
-```bash
-npm install
-npm run dev
+```powershell
+cd C:\Users\mtgde\OneDrive\Desktop\TIKI
+npm.cmd install
+npm.cmd run dev
 ```
 
-Open `http://localhost:3000`. Because Supabase is not connected yet, the Google button is disabled. Choose **Preview the portal first** to inspect the interface.
-
-Stop the development server with `Ctrl+C`.
-
-## Part B — Create Supabase
-
-1. Create a new Supabase project.
-2. Open **SQL Editor**.
-3. Open `supabase/migrations/202609060001_initial_tiki.sql` from this project.
-4. Copy the whole file into the SQL Editor and run it once.
-5. In Supabase, open the project Connect dialog or API settings.
-6. Copy the **Project URL** and **Publishable key**.
-
-In the project folder, run:
-
-```bash
-copy .env.example .env.local
-```
-
-Open `.env.local` and replace the two placeholders. Restart `npm run dev` after changing environment values.
-
-## Part C — Configure Google login
-
-There are two callbacks in this flow, and they belong in different places.
-
-### In Google Cloud / Google Auth Platform
-
-1. Create or select a Google Cloud project.
-2. Configure the OAuth consent screen and audience.
-3. Create an OAuth client of type **Web application**.
-4. Add `http://localhost:3000` as an authorized JavaScript origin for local work.
-5. Add the Supabase callback shown on Supabase’s Google provider page as the authorized redirect URI. It looks like:
+Use the `Local` address shown in PowerShell. It will normally be:
 
 ```text
-https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback
+http://localhost:3000
 ```
 
-6. Copy the Google Client ID and Client Secret.
+If port 3000 is already busy, Next.js may automatically use:
 
-### In Supabase
+```text
+http://localhost:3001
+```
 
-1. Open **Authentication → Sign In / Providers → Google**.
-2. Enable Google.
-3. Paste the Google Client ID and Client Secret, then save.
-4. Open **Authentication → URL Configuration**.
-5. For local development, add `http://localhost:3000/**` to the redirect allow list.
+Keep that PowerShell window open while using T.I.K.I. Stop the server later with `Ctrl+C`.
 
-Now run `npm run dev`, open `http://localhost:3000`, and choose **Continue with Google**.
+If Supabase is not connected yet, the login page displays **Setup mode**. Use **Preview the portal first** to inspect the interface without database access.
 
-## Part D — Activate the first administrator
+## Part B — Connect the existing Supabase project
 
-The first successful Google sign-in intentionally lands on **Access Pending**. The database created an inactive profile; nobody gets access merely because Google knows them.
+The Supabase project is already named **TIKI**, and `supabase/migrations/202609060001_initial_tiki.sql` has already been run successfully. Do not run the initial migration a second time.
 
-Open the Supabase SQL Editor and run this once, replacing the email:
+1. Open the Supabase `TIKI` project.
+2. Open the project **Connect** dialog or **Project Settings → API Keys**.
+3. Copy the **Project URL**.
+4. Copy the browser-safe **Publishable key**, which begins with `sb_publishable_`.
+5. Stop the local server with `Ctrl+C` if it is running.
+6. In PowerShell, create the local environment file:
+
+```powershell
+cd C:\Users\mtgde\OneDrive\Desktop\TIKI
+Copy-Item .env.example .env.local
+notepad .env.local
+```
+
+If `.env.local` already exists, skip the `Copy-Item` command and only open it with Notepad.
+
+Replace the placeholders with the two values from Supabase:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YOUR_VALUE
+```
+
+Save the file, close Notepad, and restart T.I.K.I.:
+
+```powershell
+npm.cmd run dev
+```
+
+Do not place a `service_role` key, an `sb_secret_...` key, or the database password in `.env.local`.
+
+## Part C — Enable email/password authentication
+
+1. In Supabase, open **Authentication → Providers**.
+2. Open the **Email** provider.
+3. Make sure email/password sign-in is enabled.
+4. Save the provider settings if you changed them.
+
+For quick local testing, you may temporarily turn off **Confirm email**. With confirmation off, a new account signs in immediately and moves to Access Pending.
+
+Before real team or production use, reconsider that choice. With confirmation enabled, users must click the confirmation email before signing in. Confirmation and password-reset email delivery should also be tested, and production use should have suitable SMTP/email delivery settings.
+
+Google Cloud Console setup is not required. Google OAuth is only a possible future enhancement.
+
+## Part D — Configure Supabase redirect URLs
+
+In Supabase, open **Authentication → URL Configuration**.
+
+During local testing, add these **Additional Redirect URLs**:
+
+```text
+http://localhost:3000/**
+http://localhost:3001/**
+```
+
+The final production configuration is documented in [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md). Redirect URLs are still required for account-confirmation and password-reset links even though sign-in itself uses email/password.
+
+## Part E — Create and activate the first administrator
+
+1. Open the T.I.K.I. login page.
+2. Choose **Create account**.
+3. Enter your email and a password of at least 8 characters.
+4. If email confirmation is enabled, open the confirmation email and follow its link.
+5. Sign in.
+
+The account should land on **Access Pending**. That is correct: authentication proves identity but does not grant department access.
+
+To activate the first administrator, open the Supabase SQL Editor and run the following once, replacing the email address:
 
 ```sql
 update public.profiles
 set active = true, role = 'admin'
-where email = 'YOUR_GOOGLE_EMAIL';
+where email = 'YOUR_EMAIL_ADDRESS';
 ```
 
-Return to the pending page and choose **Check again**. You should reach the dashboard and see Admin in the navigation.
+Return to T.I.K.I. and choose **Check again**. The dashboard and Admin navigation should appear.
 
-From then on, use **Admin → People & access** to activate other people and assign roles.
+After the first admin exists, use **Admin → People & access** to activate other profiles and assign roles.
 
-## Part E — Understand the roles
+## Part F — Understand the roles
 
-- **Viewer:** reads verified/published knowledge and can capture personal Napkin notes.
-- **Contributor:** also submits draft content as the editing forms are added.
-- **Editor:** reviews and publishes content, triages Napkin notes, and enters the restricted Vendors / Clients area.
-- **Admin:** also activates users, changes roles, and performs destructive management actions.
+- **Viewer:** reads published knowledge and captures personal Napkin notes.
+- **Contributor:** also submits draft knowledge as editing forms are added.
+- **Editor:** reviews content, triages Napkin notes, and enters Vendors / Clients.
+- **Admin:** also activates people, changes roles, and manages access.
 
-## Part F — Put it in GitHub and Netlify
+No authenticated person sees portal content until their profile is active. Supabase Row Level Security remains the hard guardrail even if someone manually types a restricted URL.
 
-Use [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md). The important sequence is:
+## Part G — Test the account flow
 
-1. Create a private GitHub repository.
-2. Push this folder.
-3. Import that repository into Netlify.
-4. Add the two Supabase environment variables in Netlify.
-5. Add the Netlify production and preview URLs to Supabase’s redirect allow list.
+Check all of these before deployment:
 
-## Part G — Verify the foundation
+1. Create a second test account.
+2. Confirm that it lands on **Access Pending**.
+3. Use the first admin account to activate it as a viewer.
+4. Confirm that the viewer can open normal modules.
+5. Confirm that the viewer cannot open `/vendors` or `/admin` by typing those URLs.
+6. On the login page, choose **Forgot password?** and confirm the reset email returns to T.I.K.I.
+7. Save a note in **T.I.K.I. Napkin**.
 
-Run these before every important push:
+## Part H — Run project checks
 
-```bash
-npm run lint
-npm run typecheck
-npm test
-npm run build
+Stop the development server with `Ctrl+C`, then run:
+
+```powershell
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run build
 ```
 
-All four should finish without errors.
+All four commands should finish without errors.
 
-## First useful content pass
+## Part I — Deploy
 
-After login and roles are proven with at least two real accounts:
+Follow [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md). The short version is:
 
-1. Add the 10–20 fixtures the team actually searches for.
-2. Add the daily Link Hub destinations.
-3. Index a few current show folders.
-4. Use T.I.K.I. Napkin in real life for a week.
-5. Do not enter sensitive vendor/client notes until the editor restriction has been tested directly.
+1. Connect Netlify to `DesignNerd-MTG/TIKI`.
+2. Add the two public Supabase environment variables.
+3. Deploy.
+4. Add `tiki.mtgdesigns.net` to Netlify.
+5. Create the `tiki` CNAME at the DNS provider.
+6. Update Supabase Auth URL Configuration.
+
+After access is proven with at least two accounts, add a small set of fixtures, daily links, and current show folders. Use T.I.K.I. Napkin in real work before expanding the product surface.

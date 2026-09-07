@@ -19,14 +19,14 @@ export default async function PendingPage() {
       <Brand />
       <section className="pending-card">
         <span className="pending-card__icon"><Clock3 size={28} /></span>
-        <p className="eyebrow">Identity verified</p>
+        <p className="eyebrow">Signed in</p>
         <h1>Access is pending.</h1>
         <p>
-          Google confirmed <strong>{identity.email}</strong>. An administrator still needs
+          Supabase confirmed <strong>{identity.email}</strong>. An administrator still needs
           to activate your T.I.K.I. profile and assign a role.
         </p>
         <div className="pending-steps">
-          <div className="pending-step pending-step--done"><ShieldCheck size={19} /><span><strong>Google sign-in</strong>Complete</span></div>
+          <div className="pending-step pending-step--done"><ShieldCheck size={19} /><span><strong>Email sign-in</strong>Complete</span></div>
           <div className="pending-step"><Clock3 size={19} /><span><strong>Department approval</strong>Waiting for an admin</span></div>
         </div>
         <p className="pending-help">Ask a T.I.K.I. administrator to activate this email, then refresh the page.</p>

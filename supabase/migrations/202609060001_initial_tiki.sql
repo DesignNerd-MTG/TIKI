@@ -425,6 +425,6 @@ create policy "revisions_admin_delete"
 on public.revision_notes for delete to authenticated
 using (public.has_minimum_role('admin'));
 
-comment on table public.profiles is 'T.I.K.I. authorization profile; Google/Supabase Auth remains the identity source.';
+comment on table public.profiles is 'T.I.K.I. authorization profile; Supabase Auth remains the identity source.';
 comment on table public.napkin_notes is 'Informal intake for useful information that is not ready to become published knowledge.';
 comment on table public.vendor_clients is 'Restricted operational context. RLS requires editor or admin access.';

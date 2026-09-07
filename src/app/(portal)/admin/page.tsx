@@ -26,7 +26,7 @@ export default async function AdminPage({
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Administration" title="People & access" description="Google confirms identity; administrators activate each person and decide what T.I.K.I. lets them do." action={<span className="restricted-badge"><ShieldCheck size={15} /> Admin only</span>} />
+      <PageHeader eyebrow="Administration" title="People & access" description="Supabase confirms identity; administrators activate each person and decide what T.I.K.I. lets them do." action={<span className="restricted-badge"><ShieldCheck size={15} /> Admin only</span>} />
       {params.saved && <div className="notice notice--success"><Check size={18} /> Access profile updated.</div>}
       {params.error && <div className="notice notice--error">The profile could not be updated.</div>}
       {error ? <DatabaseNotice /> : profiles.length ? (
@@ -57,7 +57,7 @@ export default async function AdminPage({
           ))}
         </div>
       ) : (
-        <EmptyState icon={Users} title="No profiles found" description="Profiles are created automatically the first time someone signs in with Google." />
+        <EmptyState icon={Users} title="No profiles found" description="Profiles are created automatically when someone creates an account." />
       )}
     </div>
   );

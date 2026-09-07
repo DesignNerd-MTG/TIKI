@@ -1,30 +1,38 @@
 # Environment variables
 
-T.I.K.I. uses only the browser-safe Supabase project values at this stage.
+T.I.K.I. currently uses only the browser-safe public values from the existing Supabase project named `TIKI`.
 
-| Variable | Where to find it | Secret? | Used where |
+| Variable | Where to find it | Browser-safe? | Used by |
 | --- | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project Connect dialog / API settings | No | Browser and server |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase project Connect dialog / API settings | No | Browser and server |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Connect dialog / API settings | Yes | Browser and server |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase Connect dialog / API settings | Yes | Browser and server |
+
+The names above are the names used by the code, `.env.example`, local setup, and Netlify. Do not substitute `NEXT_PUBLIC_SUPABASE_ANON_KEY` unless the entire application is intentionally migrated later.
 
 ## Local development
 
-Copy `.env.example` to `.env.local`, then replace both placeholder values.
+In PowerShell:
 
-```bash
-copy .env.example .env.local
+```powershell
+cd C:\Users\mtgde\OneDrive\Desktop\TIKI
+Copy-Item .env.example .env.local
+notepad .env.local
 ```
 
-`.env.local` is ignored by Git. Do not commit it.
+If `.env.local` already exists, do not overwrite it; open the existing file instead. Restart `npm.cmd run dev` after changing environment values.
+
+`.env.local` is ignored by Git and must stay uncommitted.
 
 ## Netlify
 
-In the Netlify site, open **Project configuration → Environment variables** and create both variables. Apply them to Production, Deploy Previews, and Branch Deploys. Their scopes must include Builds; selecting all available scopes is also appropriate for this Next.js app.
+In the Netlify site, open **Project configuration → Environment variables** and create the same two variables. Apply them to the desired deploy contexts and include the Build scope. Netlify does not read the `.env.local` file on Mike’s computer.
 
-Netlify does not use the repository’s local `.env.local` file. Values must be entered in Netlify itself.
+## Values that must never be added
 
-## Key safety
+Do not place any of the following in `.env.local`, GitHub, `netlify.toml`, or Netlify environment variables for this frontend:
 
-The publishable key is intentionally exposed to the browser. Supabase Row Level Security limits what it can do for the signed-in user.
+- Supabase `service_role` key
+- Supabase `sb_secret_...` key
+- Supabase database password
 
-Do not add `SUPABASE_SERVICE_ROLE_KEY` to this application. A service-role key bypasses Row Level Security and is not needed for the current foundation.
+The publishable key is intentionally available to the browser. Supabase Row Level Security determines what the authenticated person can read or change.

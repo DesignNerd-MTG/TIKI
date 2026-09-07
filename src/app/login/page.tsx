@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, LockKeyhole, ScanSearch } from "lucide-react";
 
 import { Brand } from "@/components/brand";
-import { GoogleSignIn } from "@/components/google-sign-in";
+import { EmailAuthForm } from "@/components/email-auth-form";
 import { getIdentityAndProfile } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -32,6 +32,21 @@ export default async function LoginPage({
     );
   }
 
+  if (identity) {
+    return (
+      <main className="centered-message">
+        <Brand />
+        <p className="eyebrow">Signed in as {identity.email}</p>
+        <h1>Your access is pending.</h1>
+        <p>An administrator still needs to activate your T.I.K.I. profile.</p>
+        <div className="button-row">
+          <Link className="primary-button" href="/pending">Check access <ArrowRight size={17} /></Link>
+          <form action="/auth/signout" method="post"><button className="secondary-button" type="submit">Sign out</button></form>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="login-page">
       <section className="login-story">
@@ -56,21 +71,21 @@ export default async function LoginPage({
         <div className="login-card">
           <p className="eyebrow">Private production portal</p>
           <h2>Welcome to T.I.K.I.</h2>
-          <p>Use your approved Google account. New identities wait for an administrator before any department content is visible.</p>
+          <p>Sign in with your email and password. New accounts wait for an administrator before any department content is visible.</p>
 
           {params.error && (
             <div className="notice notice--error" role="alert">
-              Google sign-in did not complete. Please try again.
+              That email link could not be completed. It may have expired; please try again.
             </div>
           )}
           {!configured && (
             <div className="setup-card">
               <strong>Setup mode</strong>
-              <span>Add your Supabase project values to enable Google sign-in.</span>
+              <span>Add your Supabase project values to enable email sign-in.</span>
             </div>
           )}
 
-          <GoogleSignIn configured={configured} />
+          <EmailAuthForm configured={configured} />
 
           {!configured && (
             <Link className="preview-link" href="/preview">
@@ -78,7 +93,7 @@ export default async function LoginPage({
             </Link>
           )}
 
-          <p className="security-note"><LockKeyhole size={14} /> Google verifies identity. T.I.K.I. decides access.</p>
+          <p className="security-note"><LockKeyhole size={14} /> Supabase verifies identity. T.I.K.I. decides access.</p>
         </div>
       </section>
     </main>

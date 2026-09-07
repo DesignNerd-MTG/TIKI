@@ -1,48 +1,103 @@
-# GitHub → Netlify deployment
+# GitHub → Netlify → `tiki.mtgdesigns.net`
 
-## 1. Put the project in GitHub
+The canonical code is already in the private GitHub repository `DesignNerd-MTG/TIKI`. Netlify is the deployment layer; the existing Supabase project named `TIKI` provides authentication, data, and Row Level Security.
 
-Create an empty private GitHub repository, then run the commands GitHub shows for an existing local repository. A typical first push looks like:
+## 1. Connect Netlify to GitHub
 
-```bash
-git init
-git add .
-git commit -m "Build initial T.I.K.I. foundation"
-git branch -M main
-git remote add origin YOUR_GITHUB_REPOSITORY_URL
-git push -u origin main
+1. Sign in to Netlify.
+2. Choose **Add new project → Import an existing project**.
+3. Choose GitHub and authorize access if asked.
+4. Select `DesignNerd-MTG/TIKI`.
+5. Keep the production branch set to `main`.
+
+Netlify reads [`netlify.toml`](../netlify.toml):
+
+- Build command: `npm run build`
+- Publish directory: `.next`
+- Node.js: `24.17.0`
+
+Netlify detects Next.js and supplies its maintained OpenNext adapter automatically. No Vercel configuration or separately pinned Next.js plugin is required.
+
+## 2. Add the Supabase environment variables
+
+Before the first production deploy, open **Project configuration → Environment variables** in Netlify and add exactly these application values:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ```
 
-## 2. Import it into Netlify
+Copy both from the Supabase `TIKI` project Connect dialog or API settings. Apply them to Production, Deploy Previews, and Branch Deploys, with scopes that include Builds. Using all available scopes is appropriate for this Next.js application.
 
-1. In Netlify, choose **Add new project → Import an existing project**.
-2. Choose GitHub and select the private T.I.K.I. repository.
-3. Netlify reads `netlify.toml`; the build command is `npm run build` and the publish directory is `.next`.
-4. Add both Supabase variables before the first production deploy.
-5. Deploy the site.
+Do not add a Supabase `service_role` key, `sb_secret_...` key, or database password. The frontend does not need them.
 
-The pinned Node version is `24.17.0` in both `.nvmrc` and `netlify.toml`.
+## 3. Deploy the Netlify site
 
-## 3. Allow the Netlify URLs in Supabase
+Start the deploy. When it finishes, Netlify provides a default address similar to:
 
-In **Supabase → Authentication → URL Configuration**:
+```text
+https://YOUR_NETLIFY_SITE_NAME.netlify.app
+```
 
-- Set **Site URL** to the final production address, such as `https://your-tiki-site.netlify.app`.
-- Add `http://localhost:3000/**` for local development.
-- Add `https://your-tiki-site.netlify.app/**` as an exact production redirect.
-- Add `https://**--your-tiki-site.netlify.app/**` if deploy previews need working Google sign-in.
+Open that address and confirm the T.I.K.I. login page loads. Keep the actual Netlify site name; it is needed for DNS and optional preview redirects.
 
-Supabase recommends exact production redirects. The wildcard is only for Netlify’s changing preview subdomains.
+## 4. Add the production custom domain
 
-## 4. Production/staging distinction
+DNS cannot be configured from this repository.
 
-The simplest first setup uses one Supabase project and enables OAuth on production plus preview URLs. Before real sensitive vendor/client content is entered, create a separate staging Supabase project and use Netlify’s context-specific environment values so preview deployments never touch production data.
+1. In Netlify, open **Domain management** for the T.I.K.I. site.
+2. Choose **Add a domain** and add `tiki.mtgdesigns.net`.
+3. At the DNS provider that manages `mtgdesigns.net`, create this record:
 
-## 5. Deployment checks
+| Field | Value |
+| --- | --- |
+| Type | `CNAME` |
+| Name / Host | `tiki` |
+| Target / Value | `YOUR_NETLIFY_SITE_NAME.netlify.app` |
 
-- Google login returns to `/auth/callback` on the deployed site.
-- A brand-new user lands on Access Pending.
+Use the real Netlify address, without `https://` and without a path. Netlify must know about the custom domain before the DNS record is added. DNS propagation and certificate issuance can take time.
+
+## 5. Configure Supabase Auth URLs
+
+After the custom domain exists, open **Supabase TIKI → Authentication → URL Configuration**.
+
+Set **Site URL** to:
+
+```text
+https://tiki.mtgdesigns.net
+```
+
+Add these **Additional Redirect URLs**:
+
+```text
+http://localhost:3000/**
+http://localhost:3001/**
+https://tiki.mtgdesigns.net/**
+```
+
+If authentication links must work on Netlify Deploy Previews, also add:
+
+```text
+https://**--YOUR_NETLIFY_SITE_NAME.netlify.app/**
+```
+
+Replace `YOUR_NETLIFY_SITE_NAME` with the site’s actual Netlify name. Keep the exact custom-domain entry for production; use the wildcard only for changing preview subdomains.
+
+These redirects are used by email confirmation and password recovery. If customized Supabase email templates ignore the requested redirect, check that the template uses Supabase’s redirect/confirmation variables rather than a hard-coded old URL.
+
+## 6. Production readiness checks
+
+- Email/password sign-up and sign-in work at `https://tiki.mtgdesigns.net`.
+- A confirmation email, when enabled, returns to the custom domain.
+- **Forgot password?** returns to `/reset-password` and allows a new password.
+- A new account lands on Access Pending.
+- An admin can activate that account and assign a role.
 - A viewer cannot open `/vendors` or `/admin` by typing the URL.
 - An editor can open Vendors / Clients but not Admin.
-- An admin can activate users and change roles.
-- Napkin notes are visible only to their author and editors/admins.
+- An admin can manage profiles.
+- Napkin notes remain limited by their RLS policies.
+- No secrets are committed to GitHub or exposed in Netlify configuration.
+
+## 7. Production and previews
+
+The simplest first deployment uses the existing Supabase `TIKI` project for production and previews. Before sensitive vendor/client information is entered, consider a separate staging Supabase project and Netlify context-specific environment values so preview deployments cannot affect production data.
