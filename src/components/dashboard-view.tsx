@@ -6,6 +6,8 @@ import {
   ClipboardPenLine,
   FileText,
   Link2,
+  MapPinned,
+  Martini,
   Plus,
   Search,
   Sparkles,
@@ -18,6 +20,8 @@ const modules = [
   { href: "/shows", label: "Shows", description: "Files, folders & references", icon: BookOpenText, key: "shows" },
   { href: "/links", label: "Link Hub", description: "The portals you use every day", icon: Link2, key: "links" },
   { href: "/documents", label: "Documents", description: "Manuals, plots & paperwork", icon: FileText, key: "documents" },
+  { href: "/locations", label: "Locations", description: "Studios, restaurants & useful places", icon: MapPinned, key: "locations" },
+  { href: "/drinks", label: "Drinks", description: "Cocktail recipes from the T.I.K.I. lounge", icon: Martini, key: "drinks" },
 ] as const;
 
 export type DashboardSnapshot = {
@@ -42,7 +46,7 @@ export function DashboardView({ snapshot, preview = false, role = "viewer" }: { 
         <div className="dashboard-hero__copy">
           <span className="hero-kicker"><Sparkles size={14} /> Technical knowledge, minus the scavenger hunt.</span>
           <h1>What do you need to find?</h1>
-          <p>Search the department’s fixtures, show references, documents, links, and verified field knowledge.</p>
+          <p>Search fixtures, shows, documents, links, useful locations, drinks, and verified field knowledge.</p>
           <form className="hero-search" action={preview ? "/login" : "/search"} method="get">
             <Search size={21} aria-hidden="true" />
             <input name="q" placeholder="Try “Proteus mode” or “expense report”…" aria-label="Search T.I.K.I." />

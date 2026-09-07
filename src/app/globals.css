@@ -1226,13 +1226,28 @@ select:focus-visible {
 }
 
 .sidebar__brand {
-  padding: 28px 25px 24px;
+  padding: 22px 22px 18px;
 }
 
 .sidebar__nav {
   flex: 1;
-  padding: 9px 14px;
+  padding: 5px 14px;
   overflow-y: auto;
+  scrollbar-color: var(--sidebar-border) transparent;
+  scrollbar-width: thin;
+}
+
+.sidebar__nav::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar__nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar__nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--sidebar-border);
 }
 
 .sidebar__eyebrow {
@@ -1247,14 +1262,14 @@ select:focus-visible {
 .nav-link {
   position: relative;
   display: flex;
-  min-height: 43px;
+  min-height: 39px;
   align-items: center;
   gap: 11px;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   padding: 0 12px;
   border-radius: 10px;
   color: var(--sidebar-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 650;
   transition: background 150ms ease, color 150ms ease;
 }
@@ -1286,7 +1301,7 @@ select:focus-visible {
 }
 
 .sidebar__footer {
-  padding: 18px 19px 21px;
+  padding: 14px 19px 16px;
   border-top: 1px solid var(--sidebar-border);
 }
 
@@ -1999,8 +2014,7 @@ a.record-row:hover {
 }
 
 .status-pill--submitted,
-.status-pill--needs-review,
-.status-pill--assigned {
+.status-pill--needs-review {
   background: var(--blue-soft);
   color: var(--blue);
 }
@@ -2418,6 +2432,12 @@ a.record-row:hover {
 .napkin-capture__intro,
 .napkin-form,
 .napkin-capture > .notice {
+  position: relative;
+  z-index: 1;
+}
+
+.napkin-capture > .panel__heading,
+.napkin-capture > .content-form {
   position: relative;
   z-index: 1;
 }

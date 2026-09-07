@@ -35,7 +35,6 @@ export type ContentStatus =
 export type NapkinStatus =
   | "raw"
   | "needs_review"
-  | "assigned"
   | "converted"
   | "archived";
 
@@ -44,6 +43,8 @@ export type EntityKind =
   | "show"
   | "document"
   | "link"
+  | "location"
+  | "drink"
   | "vendor_client"
   | "napkin";
 

@@ -67,18 +67,15 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   const payload: Record<string, unknown> = { ...validation.payload };
   if (!existing) payload.created_by = identity.id;
   if (kind === "napkin" && profile.role !== "viewer" && profile.role !== "contributor") {
-    const assignedTo = String(formData.get("assigned_to") ?? "").trim();
     const convertedKind = String(formData.get("converted_to_kind") ?? "").trim();
     const convertedId = String(formData.get("converted_to_id") ?? "").trim();
-    if (assignedTo && !isUuid(assignedTo)) return { ok: false, message: "Check the highlighted fields and try again.", fieldErrors: { assigned_to: "Choose a valid assignee." } };
     if (convertedKind && (!isEntityKind(convertedKind) || convertedKind === "napkin")) return { ok: false, message: "Check the highlighted fields and try again.", fieldErrors: { converted_to_kind: "Choose a valid destination type." } };
     if (convertedId && !isUuid(convertedId)) return { ok: false, message: "Check the highlighted fields and try again.", fieldErrors: { converted_to_id: "Enter a valid record UUID." } };
-    if (String(payload.status) === "converted" && (!convertedKind || !convertedId)) return { ok: false, message: "Converted notes must identify their destination record.", fieldErrors: { converted_to_id: "Choose a destination type and enter its record UUID." } };
-    payload.assigned_to = assignedTo || null;
+    if (String(payload.status) === "converted" && (!convertedKind || !convertedId)) return { ok: false, message: "Filed Napkins must identify their organized record.", fieldErrors: { converted_to_id: "Choose a destination type and enter its record UUID." } };
     payload.converted_to_kind = convertedKind || null;
     payload.converted_to_id = convertedId || null;
   }
-  if (["fixture", "show", "link", "document"].includes(kind) && ["verified", "published"].includes(String(payload.status))) {
+  if (["fixture", "show", "link", "document", "location", "drink"].includes(kind) && ["verified", "published"].includes(String(payload.status))) {
     payload.verified_by = identity.id;
     if (kind === "fixture") payload.last_verified_at = new Date().toISOString();
   }
@@ -102,6 +99,10 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   }
 
   revalidatePath(config.route);
+  if (kind === "napkin") {
+    revalidatePath("/napkin/pile");
+    revalidatePath("/napkin/queue");
+  }
   revalidatePath(`${config.route}/${recordId}`);
   revalidatePath("/dashboard");
   revalidatePath("/search");
@@ -128,6 +129,10 @@ export async function archiveContentAction(_previous: ContentActionState, formDa
   if (result.error) return { ok: false, message: `The record could not be archived. ${result.error.message}` };
   await supabase.from("revision_notes").insert({ entity_kind: kindValue, entity_id: id, summary: `Archived from ${existing.status}.`, created_by: identity.id });
   revalidatePath(config.route);
+  if (kindValue === "napkin") {
+    revalidatePath("/napkin/pile");
+    revalidatePath("/napkin/queue");
+  }
   revalidatePath(`${config.route}/${id}`);
   revalidatePath("/dashboard");
   return { ok: true, message: "Record archived. Editors can restore it by selecting another status." };
@@ -150,7 +155,7 @@ export async function deleteContentAction(_previous: ContentActionState, formDat
     await supabase.from("revision_notes").delete().eq("entity_kind", kindValue).eq("entity_id", id);
     revalidatePath(config.route);
     revalidatePath("/dashboard");
-    redirect(`${config.route}?deleted=1`);
+    redirect(kindValue === "napkin" ? "/napkin/pile?deleted=1" : `${config.route}?deleted=1`);
   }
   return { ok: true, message: "Record deleted." };
 }

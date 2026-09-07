@@ -1,7 +1,18 @@
 import type { AppRole, EntityKind, ManagedRecord } from "@/lib/types";
 
 export const contentStatuses = ["draft", "submitted", "verified", "published", "archived"] as const;
-export const napkinStatuses = ["raw", "needs_review", "assigned", "converted", "archived"] as const;
+export const napkinStatuses = ["raw", "needs_review", "converted", "archived"] as const;
+
+const statusLabels: Record<string, string> = {
+  raw: "Stored",
+  needs_review: "Under review",
+  converted: "Filed",
+  archived: "Archived",
+};
+
+export function getStatusLabel(status: string) {
+  return statusLabels[status] ?? status.replaceAll("_", " ");
+}
 
 export type FieldDefinition = {
   name: string;
@@ -85,6 +96,42 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
       { name: "description", label: "Description", type: "textarea", maxLength: 2000, wide: true },
     ],
   },
+  location: {
+    kind: "location", table: "locations", route: "/locations", singular: "Location", plural: "Locations",
+    eyebrow: "Useful places", description: "Studios, restaurants, venues, hotels, and other places worth remembering.",
+    minimumCreateRole: "contributor", titleField: "name",
+    fields: [
+      { name: "name", label: "Location name", type: "text", required: true, maxLength: 160 },
+      { name: "kind", label: "Type", type: "select", required: true, options: [
+        { value: "studio", label: "Studio" },
+        { value: "restaurant", label: "Restaurant" },
+        { value: "venue", label: "Venue" },
+        { value: "hotel", label: "Hotel" },
+        { value: "other", label: "Other" },
+      ] },
+      { name: "address", label: "Address", type: "text", maxLength: 300, wide: true },
+      { name: "city", label: "City", type: "text", maxLength: 120 },
+      { name: "region", label: "State / region", type: "text", maxLength: 120 },
+      { name: "phone", label: "Phone", type: "text", maxLength: 80 },
+      { name: "website_url", label: "Website", type: "url", placeholder: "https://…" },
+      { name: "map_url", label: "Map link", type: "url", placeholder: "https://…", wide: true },
+      { name: "notes", label: "Why it matters", type: "textarea", maxLength: 4000, wide: true },
+    ],
+  },
+  drink: {
+    kind: "drink", table: "drinks", route: "/drinks", singular: "Drink", plural: "Drinks",
+    eyebrow: "After the call", description: "Cocktail recipes worth keeping in the T.I.K.I. lounge.",
+    minimumCreateRole: "contributor", titleField: "name",
+    fields: [
+      { name: "name", label: "Drink name", type: "text", required: true, maxLength: 160 },
+      { name: "description", label: "Description", type: "textarea", maxLength: 1000, wide: true },
+      { name: "ingredients", label: "Ingredients", type: "textarea", required: true, maxLength: 4000, wide: true, help: "One ingredient per line works best." },
+      { name: "instructions", label: "Method", type: "textarea", maxLength: 4000, wide: true },
+      { name: "glassware", label: "Glassware", type: "text", maxLength: 120 },
+      { name: "garnish", label: "Garnish", type: "text", maxLength: 240 },
+      { name: "source_url", label: "Source URL", type: "url", placeholder: "https://…", wide: true },
+    ],
+  },
   vendor_client: {
     kind: "vendor_client", table: "vendor_clients", route: "/vendors", singular: "Vendor / client", plural: "Vendors & clients",
     eyebrow: "Restricted area", description: "Sensitive operational context for editors and administrators only.",
@@ -121,6 +168,8 @@ export function getRecordMeta(kind: EntityKind, record: Record<string, unknown>)
     case "show": return strings(record.job_number ? `Job ${record.job_number}` : null, record.client_name, record.location).join(" · ") || "Show details pending";
     case "link": return typeof record.category === "string" ? record.category : "General";
     case "document": return typeof record.document_type === "string" && record.document_type ? record.document_type : "Reference document";
+    case "location": return strings(record.kind, record.city, record.region).join(" · ") || "Location details pending";
+    case "drink": return strings(record.glassware, record.garnish).join(" · ") || "Cocktail recipe";
     case "vendor_client": return strings(record.kind, record.primary_contact).join(" · ") || "Contact details pending";
     case "napkin": return record.urgent ? "Important field note" : "Working knowledge";
   }
@@ -129,7 +178,7 @@ export function getRecordMeta(kind: EntityKind, record: Record<string, unknown>)
 export function getRecordDetail(kind: EntityKind, record: Record<string, unknown>) {
   const keys: Record<EntityKind, string[]> = {
     fixture: ["preferred_mode", "typical_use"], show: ["summary"], link: ["description"],
-    document: ["description"], vendor_client: ["notes"], napkin: ["source_url"],
+    document: ["description"], location: ["notes", "address"], drink: ["description", "ingredients"], vendor_client: ["notes"], napkin: ["source_url"],
   };
   for (const key of keys[kind]) {
     const value = record[key];

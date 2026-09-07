@@ -11,8 +11,12 @@ import {
   ClipboardPenLine,
   FileText,
   Gauge,
+  Layers3,
   Link2,
+  ListChecks,
+  MapPinned,
   Menu,
+  Martini,
   Search,
   Settings2,
   X,
@@ -29,7 +33,11 @@ const navigation = [
   { href: "/shows", label: "Shows", icon: BookOpenText, minimum: "viewer" },
   { href: "/links", label: "Link Hub", icon: Link2, minimum: "viewer" },
   { href: "/documents", label: "Documents", icon: FileText, minimum: "viewer" },
-  { href: "/napkin", label: "T.I.K.I. Napkin", icon: ClipboardPenLine, minimum: "viewer" },
+  { href: "/napkin", label: "Add a Napkin", icon: ClipboardPenLine, minimum: "viewer" },
+  { href: "/napkin/pile", label: "Pile of Napkins", icon: Layers3, minimum: "viewer" },
+  { href: "/napkin/queue", label: "Napkin Queue", icon: ListChecks, minimum: "editor" },
+  { href: "/locations", label: "Locations", icon: MapPinned, minimum: "viewer" },
+  { href: "/drinks", label: "Drinks", icon: Martini, minimum: "viewer" },
   { href: "/vendors", label: "Vendors / Clients", icon: Building2, minimum: "editor" },
   { href: "/admin", label: "Admin", icon: Settings2, minimum: "admin" },
 ] as const;
@@ -45,6 +53,11 @@ export function AppShell({ children, name, email, role }: AppShellProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const visibleNavigation = navigation.filter((item) => hasMinimumRole(role, item.minimum));
+  const isActive = (href: string) => {
+    if (href === "/napkin") return pathname === href;
+    if (href === "/napkin/pile") return pathname === href || (/^\/napkin\/[^/]+$/.test(pathname) && !pathname.endsWith("/queue"));
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   const nav = (
     <>
@@ -54,7 +67,7 @@ export function AppShell({ children, name, email, role }: AppShellProps) {
       <nav className="sidebar__nav" aria-label="Portal navigation">
         <p className="sidebar__eyebrow">Knowledge base</p>
         {visibleNavigation.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = isActive(item.href);
           const Icon = item.icon;
           return (
             <Link

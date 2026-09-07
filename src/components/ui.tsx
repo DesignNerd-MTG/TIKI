@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { ArrowUpRight, DatabaseZap, SearchX } from "lucide-react";
 
 import { formatDate } from "@/lib/format";
+import { getStatusLabel } from "@/lib/content";
 
 export function PageHeader({
   eyebrow,
@@ -58,7 +59,7 @@ export function DatabaseNotice() {
 }
 
 export function StatusPill({ status }: { status: string }) {
-  return <span className={`status-pill status-pill--${status.replaceAll("_", "-")}`}>{status.replaceAll("_", " ")}</span>;
+  return <span className={`status-pill status-pill--${status.replaceAll("_", "-")}`}>{getStatusLabel(status)}</span>;
 }
 
 export function RecordList({

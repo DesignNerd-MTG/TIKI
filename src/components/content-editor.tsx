@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { Archive, Save } from "lucide-react";
 
 import { archiveContentAction, deleteContentAction, saveContentAction, type ContentActionState } from "@/app/(portal)/content-actions";
-import { contentConfigs } from "@/lib/content";
-import type { EntityKind, ManagedRecord, Profile } from "@/lib/types";
+import { contentConfigs, getStatusLabel } from "@/lib/content";
+import type { EntityKind, ManagedRecord } from "@/lib/types";
 
 function SubmitButton({ create }: { create: boolean }) {
   const { pending } = useFormStatus();
@@ -19,15 +19,14 @@ export function ContentEditor({
   record,
   tags = [],
   statuses,
-  profiles = [],
 }: {
   kind: EntityKind;
   record?: ManagedRecord | null;
   tags?: string[];
   statuses: string[];
-  profiles?: Array<Pick<Profile, "id" | "email" | "full_name">>;
 }) {
   const config = contentConfigs[kind];
+  const showStatusControl = kind !== "napkin" || Boolean(record && statuses.length > 1);
   const router = useRouter();
   const [state, action] = useActionState(saveContentAction, { ok: false, message: "" } satisfies ContentActionState);
   useEffect(() => {
@@ -63,19 +62,23 @@ export function ContentEditor({
           );
         })}
 
-        <label className="form-field">
-          <span>Status</span>
-          <select name="status" defaultValue={String(record?.status ?? statuses[0])} aria-invalid={Boolean(state.fieldErrors?.status)}>
-            {statuses.map((status) => <option value={status} key={status}>{status.replaceAll("_", " ")}</option>)}
-          </select>
-          {state.fieldErrors?.status && <small className="field-error">{state.fieldErrors.status}</small>}
-        </label>
+        {showStatusControl ? (
+          <label className="form-field">
+            <span>{kind === "napkin" ? "Workflow" : "Status"}</span>
+            <select name="status" defaultValue={String(record?.status ?? statuses[0])} aria-invalid={Boolean(state.fieldErrors?.status)}>
+              {statuses.map((status) => <option value={status} key={status}>{getStatusLabel(status)}</option>)}
+            </select>
+            {kind === "napkin" && <small>Stored → Under review → Filed → Archived</small>}
+            {state.fieldErrors?.status && <small className="field-error">{state.fieldErrors.status}</small>}
+          </label>
+        ) : (
+          <input type="hidden" name="status" value={String(record?.status ?? "raw")} />
+        )}
 
-        {kind === "napkin" && profiles.length > 0 && (
+        {kind === "napkin" && record && statuses.length > 1 && (
           <>
-            <label className="form-field"><span>Assigned to</span><select name="assigned_to" defaultValue={String(record?.assigned_to ?? "")} aria-invalid={Boolean(state.fieldErrors?.assigned_to)}><option value="">Unassigned</option>{profiles.map((profile) => <option value={profile.id} key={profile.id}>{profile.full_name || profile.email}</option>)}</select>{state.fieldErrors?.assigned_to && <small className="field-error">{state.fieldErrors.assigned_to}</small>}</label>
-            <label className="form-field"><span>Converted to</span><select name="converted_to_kind" defaultValue={String(record?.converted_to_kind ?? "")} aria-invalid={Boolean(state.fieldErrors?.converted_to_kind)}><option value="">Not converted</option>{Object.values(contentConfigs).filter((item) => item.kind !== "napkin").map((item) => <option value={item.kind} key={item.kind}>{item.singular}</option>)}</select>{state.fieldErrors?.converted_to_kind && <small className="field-error">{state.fieldErrors.converted_to_kind}</small>}</label>
-            <label className="form-field form-field--wide"><span>Converted record ID</span><input name="converted_to_id" defaultValue={String(record?.converted_to_id ?? "")} placeholder="Optional UUID of the published record" aria-invalid={Boolean(state.fieldErrors?.converted_to_id)} />{state.fieldErrors?.converted_to_id && <small className="field-error">{state.fieldErrors.converted_to_id}</small>}</label>
+            <label className="form-field"><span>Filed under</span><select name="converted_to_kind" defaultValue={String(record?.converted_to_kind ?? "")} aria-invalid={Boolean(state.fieldErrors?.converted_to_kind)}><option value="">Choose a destination</option>{Object.values(contentConfigs).filter((item) => item.kind !== "napkin").map((item) => <option value={item.kind} key={item.kind}>{item.singular}</option>)}</select>{state.fieldErrors?.converted_to_kind && <small className="field-error">{state.fieldErrors.converted_to_kind}</small>}</label>
+            <label className="form-field"><span>Filed record ID</span><input name="converted_to_id" defaultValue={String(record?.converted_to_id ?? "")} placeholder="UUID of the organized record" aria-invalid={Boolean(state.fieldErrors?.converted_to_id)} />{state.fieldErrors?.converted_to_id && <small className="field-error">{state.fieldErrors.converted_to_id}</small>}</label>
           </>
         )}
 
@@ -88,7 +91,7 @@ export function ContentEditor({
         <label className="form-field form-field--wide">
           <span>Revision note</span>
           <textarea name="revision_note" rows={2} maxLength={500} placeholder={record ? "What changed, and why?" : "Optional source or context for the first revision"} aria-invalid={Boolean(state.fieldErrors?.revision_note)} />
-          <small>Status changes require a revision note.</small>
+          <small>{kind === "napkin" && !record ? "Optional source or context for this stored note." : "Status changes require a revision note."}</small>
           {state.fieldErrors?.revision_note && <small className="field-error">{state.fieldErrors.revision_note}</small>}
         </label>
       </div>

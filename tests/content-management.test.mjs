@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
-import { contentConfigs, getRecordDetail, getRecordMeta, getRecordTitle } from "../src/lib/content.ts";
+import { contentConfigs, getRecordDetail, getRecordMeta, getRecordTitle, getStatusLabel } from "../src/lib/content.ts";
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent, canSetStatus } from "../src/lib/content-rules.ts";
 import { buildSearchPattern, isSafeExternalUrl, isUuid, normalizeTags, slugifyTag, validateContentInput } from "../src/lib/content-validation.ts";
 import { defaultTheme, isThemePreset, resolveTheme, themePresets } from "../src/lib/theme.ts";
@@ -50,7 +50,12 @@ describe("content status workflow", () => {
 
   it("uses the Napkin-specific intake statuses", () => {
     assert.deepEqual(allowedStatuses("viewer", "napkin"), ["raw"]);
+    assert.deepEqual(allowedStatuses("editor", "napkin"), ["raw", "needs_review", "converted", "archived"]);
     assert.equal(canSetStatus("editor", "napkin", "converted"), true);
+    assert.equal(canSetStatus("editor", "napkin", "assigned"), false);
+    assert.equal(getStatusLabel("raw"), "Stored");
+    assert.equal(getStatusLabel("needs_review"), "Under review");
+    assert.equal(getStatusLabel("converted"), "Filed");
   });
 });
 
@@ -130,12 +135,33 @@ describe("tags, search, and record presentation", () => {
   });
 
   it("defines every MVP module and builds useful list copy", () => {
-    assert.deepEqual(Object.keys(contentConfigs).sort(), ["document", "fixture", "link", "napkin", "show", "vendor_client"]);
+    assert.deepEqual(Object.keys(contentConfigs).sort(), ["document", "drink", "fixture", "link", "location", "napkin", "show", "vendor_client"]);
     const fixture = { name: "ColorForce", manufacturer: "Chroma-Q", fixture_type: "Batten", preferred_mode: "RGBA" };
     assert.equal(getRecordTitle("fixture", fixture), "ColorForce");
     assert.equal(getRecordMeta("fixture", fixture), "Chroma-Q · Batten");
     assert.equal(getRecordDetail("fixture", fixture), "RGBA");
     assert.equal(getRecordMeta("show", { job_number: "LDG-260907", client_name: "ESPN", location: "Bristol" }), "Job LDG-260907 · ESPN · Bristol");
+    assert.equal(getRecordMeta("location", { kind: "studio", city: "New York", region: "NY" }), "studio · New York · NY");
+    assert.equal(getRecordMeta("drink", { glassware: "Double rocks", garnish: "Mint" }), "Double rocks · Mint");
+  });
+
+  it("validates useful locations and cocktail recipes as canonical knowledge", () => {
+    assert.equal(canCreateContent("viewer", "drink"), false);
+    assert.equal(canCreateContent("contributor", "drink"), true);
+    assert.equal(canCreateContent("contributor", "location"), true);
+
+    const location = validateContentInput("location", "contributor", {
+      name: "Useful Studio", kind: "studio", address: "1 Main St", city: "New York", region: "NY", phone: "",
+      website_url: "https://example.com", map_url: "https://maps.example.com", notes: "Freight entrance on the west side.",
+      status: "draft", tags: "studio", revision_note: "",
+    });
+    assert.equal(location.valid, true);
+
+    const drink = validateContentInput("drink", "contributor", {
+      name: "Mai Tai", description: "", ingredients: "1 oz lime\n2 oz rum", instructions: "Shake with ice.",
+      glassware: "Double rocks", garnish: "Mint", source_url: "", status: "draft", tags: "rum", revision_note: "",
+    });
+    assert.equal(drink.valid, true);
   });
 
   it("accepts and limits show job numbers", () => {
@@ -178,6 +204,32 @@ describe("Supabase RLS migration", () => {
     assert.match(sql, /add column if not exists job_number text/i);
     assert.match(sql, /char_length\(job_number\) <= 80/i);
     assert.doesNotMatch(sql, /update public\.shows|delete from public\.shows/i);
+  });
+
+  it("adds Locations and Drinks with protected repository access", async () => {
+    const enumSql = await readFile(new URL("../supabase/migrations/202609070004_expand_relationship_kind.sql", import.meta.url), "utf8");
+    const sql = await readFile(new URL("../supabase/migrations/202609070005_locations_drinks_napkin_workflow.sql", import.meta.url), "utf8");
+    assert.match(enumSql, /add value if not exists 'location'/i);
+    assert.match(enumSql, /add value if not exists 'drink'/i);
+    assert.match(sql, /create table if not exists public\.locations/i);
+    assert.match(sql, /create table if not exists public\.drinks/i);
+    assert.match(sql, /locations_delete_admin/i);
+    assert.match(sql, /drinks_delete_admin/i);
+    assert.match(sql, /when 'location'/i);
+    assert.match(sql, /when 'drink'/i);
+    assert.doesNotMatch(sql, /service_role|sb_secret_/i);
+  });
+
+  it("turns the Napkin into a shared stored-review-filed repository", async () => {
+    const sql = await readFile(new URL("../supabase/migrations/202609070005_locations_drinks_napkin_workflow.sql", import.meta.url), "utf8");
+    const editor = await readFile(new URL("../src/components/content-editor.tsx", import.meta.url), "utf8");
+    const navigation = await readFile(new URL("../src/components/app-shell.tsx", import.meta.url), "utf8");
+    assert.match(sql, /set status = 'needs_review', assigned_to = null/i);
+    assert.match(sql, /status <> 'archived' or public\.has_minimum_role\('editor'\)/i);
+    assert.doesNotMatch(editor, /Assigned to/);
+    assert.match(editor, /Stored → Under review → Filed → Archived/);
+    assert.match(navigation, /Pile of Napkins/);
+    assert.match(navigation, /Napkin Queue/);
   });
 });
 

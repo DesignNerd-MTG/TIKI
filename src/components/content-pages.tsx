@@ -10,7 +10,7 @@ import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent,
 import { requireActiveProfile } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import type { EntityKind, ManagedRecord, Profile } from "@/lib/types";
+import type { EntityKind, ManagedRecord } from "@/lib/types";
 
 function stringify(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -31,13 +31,26 @@ export async function ContentIndexPage({
   searchParams,
   icon,
   inlineCreate = false,
+  title,
+  eyebrow,
+  description,
+  createLabel,
+  listRoute,
+  createRoute,
 }: {
   kind: EntityKind;
   searchParams?: Promise<{ view?: string; deleted?: string }>;
   icon?: LucideIcon;
   inlineCreate?: boolean;
+  title?: string;
+  eyebrow?: string;
+  description?: string;
+  createLabel?: string;
+  listRoute?: string;
+  createRoute?: string;
 }) {
   const config = contentConfigs[kind];
+  const browseRoute = listRoute ?? config.route;
   const [{ profile }, params, supabase] = await Promise.all([
     requireActiveProfile(config.restricted ? "editor" : "viewer"),
     searchParams ?? Promise.resolve<{ view?: string; deleted?: string }>({}),
@@ -61,15 +74,15 @@ export async function ContentIndexPage({
 
   const actions = (
     <div className="page-actions">
-      {mayReviewArchive && <Link className="secondary-button" href={showArchived ? config.route : `${config.route}?view=archived`}>{showArchived ? "Current records" : "Archived"}</Link>}
-      {mayCreate && !inlineCreate && <Link className="primary-button" href={`${config.route}/new`}><Plus size={16} /> Add {config.singular.toLowerCase()}</Link>}
+      {mayReviewArchive && <Link className="secondary-button" href={showArchived ? browseRoute : `${browseRoute}?view=archived`}>{showArchived ? "Current records" : "Archived"}</Link>}
+      {mayCreate && !inlineCreate && <Link className="primary-button" href={createRoute ?? `${config.route}/new`}><Plus size={16} /> {createLabel ?? `Add ${config.singular.toLowerCase()}`}</Link>}
       {config.restricted && <span className="restricted-badge"><LockKeyhole size={15} /> Editor access</span>}
     </div>
   );
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow={config.eyebrow} title={showArchived ? `Archived ${config.plural.toLowerCase()}` : config.plural} description={config.description} action={actions} />
+      <PageHeader eyebrow={eyebrow ?? config.eyebrow} title={showArchived ? `Archived ${(title ?? config.plural).toLowerCase()}` : (title ?? config.plural)} description={description ?? config.description} action={actions} />
       {params.deleted && <div className="notice notice--success">The record was permanently deleted.</div>}
       {inlineCreate && mayCreate && (
         <section className="panel editor-panel">
@@ -116,12 +129,9 @@ export async function ContentDetailPage({
   const result = await supabase.from(config.table).select("*").eq("id", id).maybeSingle();
   if (!result.data) notFound();
   const record = result.data as ManagedRecord;
-  const [tags, revisionsResult, profilesResult] = await Promise.all([
+  const [tags, revisionsResult] = await Promise.all([
     getTags(kind, id),
     supabase.from("revision_notes").select("id,summary,source,created_at").eq("entity_kind", kind).eq("entity_id", id).order("created_at", { ascending: false }).limit(30),
-    kind === "napkin" && (profile.role === "editor" || profile.role === "admin")
-      ? supabase.from("profiles").select("id,email,full_name").eq("active", true).order("full_name")
-      : Promise.resolve({ data: [] }),
   ]);
   const mayEdit = canEditContent(profile.role, identity.id, kind, record);
   const mayArchive = record.status !== "archived" && canArchiveContent(profile.role, identity.id, kind, record);
@@ -168,7 +178,7 @@ export async function ContentDetailPage({
       {mayEdit ? (
         <section className="panel editor-panel">
           <div className="panel__heading"><div><p className="eyebrow">Role-aware controls</p><h2>Edit {config.singular.toLowerCase()}</h2></div></div>
-          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} profiles={(profilesResult.data ?? []) as Array<Pick<Profile, "id" | "email" | "full_name">>} />
+          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} />
         </section>
       ) : (
         <div className="notice notice--neutral">This record is read-only for your current role.</div>
