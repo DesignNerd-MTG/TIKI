@@ -24,7 +24,8 @@ export function EditButton() {
     const editor = document.getElementById("edit-record");
     if (!editor) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    editor.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    const top = editor.getBoundingClientRect().top + window.scrollY - 84;
+    window.scrollTo({ top, behavior: reducedMotion ? "auto" : "smooth" });
     const firstField = editor.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input:not([type='hidden']), textarea, select");
     window.setTimeout(() => firstField?.focus({ preventScroll: true }), reducedMotion ? 0 : 300);
   }

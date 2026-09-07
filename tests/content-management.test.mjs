@@ -269,7 +269,7 @@ describe("Supabase RLS migration", () => {
     const pages = await readFile(new URL("../src/components/content-pages.tsx", import.meta.url), "utf8");
     assert.match(editor, /autoFocus={!record && index === 0}/);
     assert.match(editor, /!\(kind === "napkin" && !record\)/);
-    assert.match(editor, /scrollIntoView\([\s\S]*block: "start"/);
+    assert.match(editor, /window\.scrollTo\([\s\S]*behavior:/);
     assert.match(editor, /firstField\?\.focus/);
     assert.match(pages, /<EditButton \/>/);
     assert.match(pages, /id="edit-record"/);
