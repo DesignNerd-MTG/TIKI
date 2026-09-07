@@ -34,16 +34,26 @@ describe("portal appearance presets", () => {
     assert.equal(resolveTheme(undefined), defaultTheme);
     assert.equal(isThemePreset("night"), true);
     assert.equal(isThemePreset("custom-css"), false);
-    assert.deepEqual(themePresets[0].swatches, ["#1f1b18", "#352e29", "#69cbc7", "#f2e8da"]);
+    assert.deepEqual(themePresets[0].swatches, ["#1f1b18", "#352e29", "#c9684f", "#1b1816"]);
   });
 
   it("keeps text readable on every theme canvas", () => {
     for (const preset of themePresets) {
-      const [canvas, , , text] = preset.swatches;
+      const [canvas, , , control] = preset.swatches;
       assert.ok(
-        contrastRatio(canvas, text) >= 4.5,
+        contrastRatio(canvas, preset.text) >= 4.5,
         `${preset.label} must meet WCAG AA canvas contrast`,
       );
+      assert.ok(
+        contrastRatio(control, preset.text) >= 4.5,
+        `${preset.label} must meet WCAG AA field contrast`,
+      );
+      for (const swatch of preset.swatches) {
+        assert.ok(
+          luminance(swatch) < 0.62,
+          `${preset.label} swatches should stay in the darker palette range`,
+        );
+      }
     }
   });
 
@@ -54,6 +64,7 @@ describe("portal appearance presets", () => {
     assert.match(css, /--control-fill:/);
     assert.match(css, /\.form-field input:not\(\[type="checkbox"\]\)[\s\S]*background: var\(--control-fill\)/);
     assert.match(css, /\.theme-live-preview/);
+    assert.match(css, /\[data-theme\][\s\S]*--slate: var\(--text-secondary\)/);
   });
 
   it("protects the global setting with authenticated read and admin update RLS", async () => {

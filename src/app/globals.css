@@ -98,66 +98,132 @@
 }
 
 [data-theme="lagoon"] {
-  --canvas: #abc9c4;
-  --surface: #c9deda;
-  --surface-raised: #e5f0ed;
-  --surface-muted: #bed4cf;
-  --surface-hover: #d6e7e3;
-  --control-fill: #b9d2cd;
-  --topbar: rgba(201, 222, 218, 0.94);
-  --text-primary: #102626;
-  --text-secondary: #294c4b;
-  --text-muted: #4e6f6e;
-  --border: #79a39d;
-  --border-soft: #a9c7c2;
-  --accent: #087579;
-  --accent-strong: #056367;
-  --accent-link: #045a5d;
-  --accent-soft: #acd6d2;
-  --focus-ring: rgba(8, 117, 121, 0.32);
-  --hero-bg: #12373d;
+  --canvas: #173034;
+  --surface: #203d40;
+  --surface-raised: #2b4d4f;
+  --surface-muted: #1b3538;
+  --surface-hover: #34595a;
+  --control-fill: #142a2d;
+  --topbar: rgba(27, 53, 56, 0.96);
+  --text-primary: #e5f3ef;
+  --text-secondary: #bfd5d0;
+  --text-muted: #92b2ae;
+  --border: #4b7471;
+  --border-soft: #345957;
+  --accent: #62c7be;
+  --accent-strong: #087579;
+  --accent-link: #8ee0d8;
+  --accent-soft: #214f4c;
+  --focus-ring: rgba(98, 199, 190, 0.4);
+  --hero-bg: #0e2529;
+  --coral: #ff957b;
+  --coral-soft: #3a211d;
+  --gold: #e3b855;
+  --gold-soft: #3a301c;
+  --blue: #a9cce0;
+  --blue-soft: #20333e;
+  --danger-border: #7e493d;
+  --danger-hover: #482720;
+  --danger-text: #ffb6a3;
+  --warning-border: #806b31;
+  --warning-surface: #332b19;
+  --warning-text: #f4d989;
+  --error-border: #7e493d;
+  --error-surface: #351f1b;
+  --error-text: #ffb6a3;
+  --success-border: #3e7166;
+  --success-surface: #18322c;
+  --success-text: #9fe0d0;
+  --neutral-surface: #2d3c41;
+  --neutral-text: #b9c9cb;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22), 0 10px 28px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.32);
 }
 
 [data-theme="sunset-coral"] {
-  --canvas: #d4aa93;
-  --surface: #e4c3b0;
-  --surface-raised: #f4e2d5;
-  --surface-muted: #d9b49f;
-  --surface-hover: #ecd1c1;
-  --control-fill: #dcb9a5;
-  --topbar: rgba(228, 195, 176, 0.94);
-  --text-primary: #321d18;
-  --text-secondary: #634238;
-  --text-muted: #805d51;
-  --border: #b47c65;
-  --border-soft: #d29f87;
-  --accent: #a94d3b;
-  --accent-strong: #8d3d2f;
-  --accent-link: #793326;
-  --accent-soft: #efc5b5;
-  --focus-ring: rgba(158, 73, 56, 0.32);
-  --hero-bg: #432822;
+  --canvas: #3b2521;
+  --surface: #503029;
+  --surface-raised: #643d32;
+  --surface-muted: #452a25;
+  --surface-hover: #72483b;
+  --control-fill: #321e1a;
+  --topbar: rgba(69, 42, 37, 0.96);
+  --text-primary: #f6e2d5;
+  --text-secondary: #dcbca9;
+  --text-muted: #b18f7d;
+  --border: #8b5e4c;
+  --border-soft: #654236;
+  --accent: #f08d6e;
+  --accent-strong: #9e4938;
+  --accent-link: #ffc0a8;
+  --accent-soft: #5c3228;
+  --focus-ring: rgba(240, 141, 110, 0.4);
+  --hero-bg: #2a1a18;
+  --coral: #ff9a7e;
+  --coral-soft: #5c3228;
+  --gold: #edbb58;
+  --gold-soft: #4a351e;
+  --blue: #b7d1df;
+  --blue-soft: #293c46;
+  --danger-border: #9a5847;
+  --danger-hover: #6a352b;
+  --danger-text: #ffc0aa;
+  --warning-border: #8d6b32;
+  --warning-surface: #49331e;
+  --warning-text: #f5d58a;
+  --error-border: #9a5847;
+  --error-surface: #562d25;
+  --error-text: #ffc0aa;
+  --success-border: #47776a;
+  --success-surface: #213c35;
+  --success-text: #a8e2d3;
+  --neutral-surface: #533f39;
+  --neutral-text: #dbc5bb;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24), 0 10px 28px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.34);
 }
 
 [data-theme="palm"] {
-  --canvas: #afbf9f;
-  --surface: #cad6bc;
-  --surface-raised: #e5ebdc;
-  --surface-muted: #becbae;
-  --surface-hover: #d6e0ca;
-  --control-fill: #bdcbaa;
-  --topbar: rgba(202, 214, 188, 0.94);
-  --text-primary: #1e2b1d;
-  --text-secondary: #40533d;
-  --text-muted: #63715c;
-  --border: #829574;
-  --border-soft: #a8b69a;
-  --accent: #4a7747;
-  --accent-strong: #3f653d;
-  --accent-link: #345633;
-  --accent-soft: #bad1b4;
-  --focus-ring: rgba(66, 103, 63, 0.32);
-  --hero-bg: #243a2c;
+  --canvas: #223023;
+  --surface: #304332;
+  --surface-raised: #405744;
+  --surface-muted: #293a2b;
+  --surface-hover: #4c654f;
+  --control-fill: #1d2a1e;
+  --topbar: rgba(41, 58, 43, 0.96);
+  --text-primary: #e7f0df;
+  --text-secondary: #c3d0ba;
+  --text-muted: #97ac90;
+  --border: #62795d;
+  --border-soft: #445b43;
+  --accent: #88c47f;
+  --accent-strong: #42673f;
+  --accent-link: #a9dda2;
+  --accent-soft: #2d5531;
+  --focus-ring: rgba(136, 196, 127, 0.4);
+  --hero-bg: #17251a;
+  --coral: #ff9d85;
+  --coral-soft: #472b25;
+  --gold: #e6bd5d;
+  --gold-soft: #3e351f;
+  --blue: #afd0df;
+  --blue-soft: #243a43;
+  --danger-border: #835044;
+  --danger-hover: #4e2c25;
+  --danger-text: #ffbaa8;
+  --warning-border: #7d6c38;
+  --warning-surface: #37311d;
+  --warning-text: #efd989;
+  --error-border: #835044;
+  --error-surface: #3d2520;
+  --error-text: #ffbaa8;
+  --success-border: #507a59;
+  --success-surface: #213d29;
+  --success-text: #a8dfb0;
+  --neutral-surface: #344537;
+  --neutral-text: #c1d0bf;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22), 0 10px 28px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.32);
 }
 
 [data-theme="night"] {
@@ -201,6 +267,21 @@
   --neutral-text: #b9c9cb;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22), 0 10px 28px rgba(0, 0, 0, 0.18);
   --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.32);
+}
+
+/* Keep legacy component tokens bound to the active preset instead of the light root palette. */
+[data-theme] {
+  --ink: var(--text-primary);
+  --ink-2: var(--hero-bg);
+  --slate: var(--text-secondary);
+  --muted: var(--text-muted);
+  --line: var(--border);
+  --line-soft: var(--border-soft);
+  --paper: var(--canvas);
+  --white: var(--surface-raised);
+  --teal: var(--accent);
+  --teal-dark: var(--accent-link);
+  --teal-soft: var(--accent-soft);
 }
 
 * {
@@ -1568,10 +1649,11 @@ select:focus-visible {
   padding: 24px;
   background: #fffaf0;
   color: #211b17;
-  color: #211b17;
   --text-primary: #211b17;
   --text-secondary: #56483c;
   --text-muted: #76675a;
+  --teal-dark: #17666a;
+  --gold-soft: #f8edce;
 }
 
 .napkin-card::after {
@@ -2200,10 +2282,11 @@ a.record-row:hover {
   background-size: 100% 32px;
   box-shadow: var(--shadow-sm);
   color: #211b17;
-  color: #211b17;
   --text-primary: #211b17;
   --text-secondary: #56483c;
   --text-muted: #76675a;
+  --teal-dark: #17666a;
+  --gold-soft: #f8edce;
 }
 
 .napkin-capture::before {
