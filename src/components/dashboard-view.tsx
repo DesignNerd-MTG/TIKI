@@ -12,8 +12,6 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { hasMinimumRole } from "@/lib/access";
-import type { AppRole } from "@/lib/types";
 
 const modules = [
   { href: "/fixtures", label: "Fixtures", description: "Modes, charts & field notes", icon: Boxes, key: "fixtures" },
@@ -36,7 +34,7 @@ export type DashboardSnapshot = {
   }>;
 };
 
-export function DashboardView({ snapshot, preview = false, role = "viewer" }: { snapshot: DashboardSnapshot; preview?: boolean; role?: AppRole }) {
+export function DashboardView({ snapshot, preview = false }: { snapshot: DashboardSnapshot; preview?: boolean }) {
   const linkFor = (href: string) => (preview ? "/login" : href);
 
   return (
@@ -60,7 +58,6 @@ export function DashboardView({ snapshot, preview = false, role = "viewer" }: { 
           <div><p className="eyebrow">Quick actions</p><h2>Keep the index moving</h2></div>
           <div className="page-actions">
             <Link className="secondary-button" href="/napkin"><Plus size={15} /> Capture a Napkin</Link>
-            {hasMinimumRole(role, "contributor") && <Link className="primary-button" href="/fixtures/new"><Plus size={15} /> Add knowledge</Link>}
           </div>
         </section>
       )}

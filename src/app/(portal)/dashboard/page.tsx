@@ -96,7 +96,7 @@ export default async function DashboardPage({
           <div><strong>The portal is connected, but its tables are not ready.</strong><span>Run the initial Supabase migration from the setup guide.</span></div>
         </div>
       )}
-      <DashboardView snapshot={snapshot} role={profile.role} />
+      <DashboardView snapshot={snapshot} />
     </>
   );
 }

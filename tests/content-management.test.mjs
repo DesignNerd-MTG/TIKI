@@ -228,12 +228,15 @@ describe("Supabase RLS migration", () => {
     const sql = await readFile(new URL("../supabase/migrations/202609070005_locations_drinks_napkin_workflow.sql", import.meta.url), "utf8");
     const editor = await readFile(new URL("../src/components/content-editor.tsx", import.meta.url), "utf8");
     const navigation = await readFile(new URL("../src/components/app-shell.tsx", import.meta.url), "utf8");
+    const dashboard = await readFile(new URL("../src/components/dashboard-view.tsx", import.meta.url), "utf8");
     assert.match(sql, /set status = 'needs_review', assigned_to = null/i);
     assert.match(sql, /status <> 'archived' or public\.has_minimum_role\('editor'\)/i);
     assert.doesNotMatch(editor, /Assigned to/);
     assert.match(editor, /Approve & File/);
     assert.match(navigation, /Pile of Napkins/);
     assert.match(navigation, /Napkin Queue/);
+    assert.match(dashboard, /Capture a Napkin/);
+    assert.doesNotMatch(dashboard, /Add knowledge|href="\/fixtures\/new"/i);
   });
 
   it("files approved Napkins into published destination records atomically", async () => {
