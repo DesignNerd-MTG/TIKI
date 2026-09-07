@@ -54,6 +54,7 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
     minimumCreateRole: "contributor", titleField: "title",
     fields: [
       { name: "title", label: "Show title", type: "text", required: true, maxLength: 160 },
+      { name: "job_number", label: "Job number", type: "text", maxLength: 80, placeholder: "LDG job or project number" },
       { name: "client_name", label: "Client", type: "text", maxLength: 160 },
       { name: "location", label: "Location", type: "text", maxLength: 240 },
       { name: "start_date", label: "Start date", type: "date" },
@@ -117,7 +118,7 @@ export function getRecordMeta(kind: EntityKind, record: Record<string, unknown>)
   const strings = (...values: unknown[]) => values.filter((value): value is string => typeof value === "string" && value.length > 0);
   switch (kind) {
     case "fixture": return strings(record.manufacturer, record.fixture_type).join(" · ") || "Fixture details pending";
-    case "show": return strings(record.client_name, record.location).join(" · ") || "Show details pending";
+    case "show": return strings(record.job_number ? `Job ${record.job_number}` : null, record.client_name, record.location).join(" · ") || "Show details pending";
     case "link": return typeof record.category === "string" ? record.category : "General";
     case "document": return typeof record.document_type === "string" && record.document_type ? record.document_type : "Reference document";
     case "vendor_client": return strings(record.kind, record.primary_contact).join(" · ") || "Contact details pending";

@@ -90,7 +90,7 @@ describe("content validation and failure handling", () => {
 
   it("rejects reversed show dates and unauthorized publishing", () => {
     const result = validateContentInput("show", "contributor", {
-      title: "MVP Test Show", client_name: "", location: "", start_date: "2026-09-10", end_date: "2026-09-09",
+      title: "MVP Test Show", job_number: "LDG-260907", client_name: "", location: "", start_date: "2026-09-10", end_date: "2026-09-09",
       primary_link: "", summary: "", status: "published", tags: "", revision_note: "Trying to publish",
     });
     assert.equal(result.valid, false);
@@ -135,6 +135,23 @@ describe("tags, search, and record presentation", () => {
     assert.equal(getRecordTitle("fixture", fixture), "ColorForce");
     assert.equal(getRecordMeta("fixture", fixture), "Chroma-Q · Batten");
     assert.equal(getRecordDetail("fixture", fixture), "RGBA");
+    assert.equal(getRecordMeta("show", { job_number: "LDG-260907", client_name: "ESPN", location: "Bristol" }), "Job LDG-260907 · ESPN · Bristol");
+  });
+
+  it("accepts and limits show job numbers", () => {
+    const valid = validateContentInput("show", "contributor", {
+      title: "MVP Test Show", job_number: "LDG-260907", client_name: "ESPN", location: "Bristol",
+      start_date: "", end_date: "", primary_link: "", summary: "", status: "draft", tags: "", revision_note: "",
+    });
+    assert.equal(valid.valid, true);
+    if (valid.valid) assert.equal(valid.payload.job_number, "LDG-260907");
+
+    const invalid = validateContentInput("show", "contributor", {
+      title: "MVP Test Show", job_number: "J".repeat(81), client_name: "", location: "",
+      start_date: "", end_date: "", primary_link: "", summary: "", status: "draft", tags: "", revision_note: "",
+    });
+    assert.equal(invalid.valid, false);
+    if (!invalid.valid) assert.match(invalid.fieldErrors.job_number, /too long/);
   });
 });
 
@@ -154,6 +171,13 @@ describe("Supabase RLS migration", () => {
     assert.match(sql, /site_settings_admin_update/);
     assert.match(sql, /has_minimum_role\('admin'\)/);
     assert.doesNotMatch(sql, /service_role|sb_secret_/i);
+  });
+
+  it("adds the optional show job number without rewriting existing records", async () => {
+    const sql = await readFile(new URL("../supabase/migrations/202609070003_show_job_number.sql", import.meta.url), "utf8");
+    assert.match(sql, /add column if not exists job_number text/i);
+    assert.match(sql, /char_length\(job_number\) <= 80/i);
+    assert.doesNotMatch(sql, /update public\.shows|delete from public\.shows/i);
   });
 });
 

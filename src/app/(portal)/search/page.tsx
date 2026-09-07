@@ -27,7 +27,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       : Promise.resolve({ data: [], error: null });
     const [fixtures, shows, documents, links, vendors, napkin, tagLinks] = await Promise.all([
       supabase.from("fixtures").select("id,name,manufacturer,preferred_mode").neq("status", "archived").or(`name.ilike.${pattern},manufacturer.ilike.${pattern},preferred_mode.ilike.${pattern},field_notes.ilike.${pattern}`).limit(12),
-      supabase.from("shows").select("id,title,client_name,location,summary").neq("status", "archived").or(`title.ilike.${pattern},client_name.ilike.${pattern},location.ilike.${pattern},summary.ilike.${pattern}`).limit(12),
+      supabase.from("shows").select("id,title,job_number,client_name,location,summary").neq("status", "archived").or(`title.ilike.${pattern},job_number.ilike.${pattern},client_name.ilike.${pattern},location.ilike.${pattern},summary.ilike.${pattern}`).limit(12),
       supabase.from("documents").select("id,title,document_type,description").neq("status", "archived").or(`title.ilike.${pattern},document_type.ilike.${pattern},description.ilike.${pattern}`).limit(12),
       supabase.from("link_items").select("id,label,category,description").neq("status", "archived").or(`label.ilike.${pattern},category.ilike.${pattern},description.ilike.${pattern}`).limit(12),
       vendorRequest,
@@ -37,7 +37,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     searchFailed = [fixtures, shows, documents, links, vendors, napkin, tagLinks].some((result) => Boolean(result.error));
     groups = [
       { label: "Fixtures", icon: Boxes, records: (fixtures.data ?? []).map((item) => ({ id: item.id, title: item.name, meta: item.manufacturer || "Fixture", detail: item.preferred_mode ? `Preferred mode: ${item.preferred_mode}` : null, href: `/fixtures/${item.id}` })) },
-      { label: "Shows", icon: BookOpenText, records: (shows.data ?? []).map((item) => ({ id: item.id, title: item.title, meta: [item.client_name, item.location].filter(Boolean).join(" · ") || "Show", detail: item.summary, href: `/shows/${item.id}` })) },
+      { label: "Shows", icon: BookOpenText, records: (shows.data ?? []).map((item) => ({ id: item.id, title: item.title, meta: [item.job_number ? `Job ${item.job_number}` : null, item.client_name, item.location].filter(Boolean).join(" · ") || "Show", detail: item.summary, href: `/shows/${item.id}` })) },
       { label: "Documents", icon: FileText, records: (documents.data ?? []).map((item) => ({ id: item.id, title: item.title, meta: item.document_type || "Document", detail: item.description, href: `/documents/${item.id}` })) },
       { label: "Links", icon: Link2, records: (links.data ?? []).map((item) => ({ id: item.id, title: item.label, meta: item.category, detail: item.description, href: `/links/${item.id}` })) },
       { label: "Vendors & clients", icon: Building2, records: (vendors.data ?? []).map((item) => ({ id: item.id, title: item.name, meta: item.kind, detail: [item.primary_contact, item.notes].filter(Boolean).join(" · "), href: `/vendors/${item.id}` })) },

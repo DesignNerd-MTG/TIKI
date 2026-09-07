@@ -17,6 +17,8 @@ T.I.K.I. Napkin uses `raw`, `needs_review`, `assigned`, `converted`, and `archiv
 
 Documents remain an index of authoritative HTTP(S) URLs. No uploads or Supabase Storage buckets are part of this milestone.
 
+Show records include an optional job number. It appears in create/edit forms, record details, lists, dashboard activity, and global search while leaving existing shows valid.
+
 ## Permission matrix
 
 | Capability | Viewer | Contributor | Editor | Admin |
@@ -39,6 +41,7 @@ Apply migrations in timestamp order. Existing installations need these additive 
 ```text
 supabase/migrations/202609070001_content_management_mvp.sql
 supabase/migrations/202609070002_site_appearance.sql
+supabase/migrations/202609070003_show_job_number.sql
 ```
 
 The migrations do not modify or delete content rows. They add indexes, polymorphic authorization helpers, an atomic tag-sync function, stricter content policies, and a single global appearance row with authenticated read and Admin-only update access. In particular, Contributor inserts and updates are restricted to `draft` or `submitted`.
