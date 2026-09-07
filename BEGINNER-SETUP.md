@@ -114,7 +114,7 @@ After the first admin exists, use **Admin → People & access** to activate othe
 
 ## Part F — Understand the roles
 
-- **Viewer:** reads verified/published knowledge and captures, edits, or archives personal raw Napkin notes.
+- **Viewer:** reads published knowledge and captures, edits, or archives personal raw Napkin notes.
 - **Contributor:** also creates drafts, edits their own working records, and submits them for review.
 - **Editor:** reviews all content, changes publication status, triages Napkin notes, and manages Vendors / Clients.
 - **Admin:** also activates people, changes roles, and permanently deletes records after they are archived.

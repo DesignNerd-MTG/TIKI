@@ -1,6 +1,6 @@
 import type { AppRole, EntityKind, ManagedRecord } from "@/lib/types";
 
-export const contentStatuses = ["draft", "submitted", "verified", "published", "archived"] as const;
+export const contentStatuses = ["draft", "submitted", "published", "archived"] as const;
 export const napkinStatuses = ["raw", "needs_review", "converted", "archived"] as const;
 export const filingDestinationKinds = ["fixture", "show", "link", "document", "location", "drink"] as const;
 export type FilingDestinationKind = (typeof filingDestinationKinds)[number];
@@ -8,7 +8,6 @@ export type FilingDestinationKind = (typeof filingDestinationKinds)[number];
 const statusLabels: Record<string, string> = {
   draft: "Draft",
   submitted: "Awaiting approval",
-  verified: "Approved",
   published: "Published",
   raw: "Stored",
   needs_review: "Under review",

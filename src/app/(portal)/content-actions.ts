@@ -73,7 +73,7 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   if (kind === "napkin" && String(payload.status) === "converted" && existing?.status !== "converted") {
     return { ok: false, message: "Use Approve & File so T.I.K.I. can create and link the destination record." };
   }
-  if (["fixture", "show", "link", "document", "location", "drink"].includes(kind) && ["verified", "published"].includes(String(payload.status))) {
+  if (["fixture", "show", "link", "document", "location", "drink"].includes(kind) && payload.status === "published") {
     payload.verified_by = identity.id;
     if (kind === "fixture") payload.last_verified_at = new Date().toISOString();
   }

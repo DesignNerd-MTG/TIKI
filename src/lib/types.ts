@@ -28,7 +28,6 @@ export type AccessContext = {
 export type ContentStatus =
   | "draft"
   | "submitted"
-  | "verified"
   | "published"
   | "archived";
 

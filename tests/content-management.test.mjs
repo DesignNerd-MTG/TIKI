@@ -44,8 +44,10 @@ describe("content CRUD permissions", () => {
 describe("content status workflow", () => {
   it("limits contributors to draft and submitted", () => {
     assert.deepEqual(allowedStatuses("contributor", "fixture"), ["draft", "submitted"]);
+    assert.deepEqual(allowedStatuses("editor", "fixture"), ["draft", "submitted", "published", "archived"]);
     assert.equal(canSetStatus("contributor", "fixture", "published"), false);
     assert.equal(canSetStatus("editor", "fixture", "published"), true);
+    assert.equal(canSetStatus("editor", "fixture", "verified"), false);
   });
 
   it("uses the Napkin-specific intake statuses", () => {
@@ -57,7 +59,6 @@ describe("content status workflow", () => {
     assert.equal(getStatusLabel("needs_review"), "Under review");
     assert.equal(getStatusLabel("converted"), "Filed");
     assert.equal(getStatusLabel("submitted"), "Awaiting approval");
-    assert.equal(getStatusLabel("verified"), "Approved");
   });
 });
 
@@ -246,6 +247,14 @@ describe("Supabase RLS migration", () => {
     assert.match(sql, /select ct\.tag_id, target_kind, new_id/i);
     assert.match(sql, /status, created_by, verified_by[\s\S]*'published'/i);
     assert.match(action, /supabase\.rpc\("file_napkin"/);
+    assert.doesNotMatch(sql, /service_role|sb_secret_/i);
+  });
+
+  it("uses Published as the only approved reader-visible state", async () => {
+    const sql = await readFile(new URL("../supabase/migrations/202609070007_simplify_publication_status.sql", import.meta.url), "utf8");
+    assert.match(sql, /set status = 'published' where status = 'verified'/i);
+    assert.match(sql, /check \(status <> 'verified'\)/i);
+    assert.match(sql, /status = 'published' or public\.has_minimum_role\('editor'\)/i);
     assert.doesNotMatch(sql, /service_role|sb_secret_/i);
   });
 });
