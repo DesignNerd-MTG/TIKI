@@ -34,13 +34,16 @@ Both server actions and Supabase RLS enforce these boundaries. Hiding a button i
 
 ## Database migration
 
-Apply migrations in timestamp order. Existing installations need only the second file:
+Apply migrations in timestamp order. Existing installations need these additive files:
 
 ```text
 supabase/migrations/202609070001_content_management_mvp.sql
+supabase/migrations/202609070002_site_appearance.sql
 ```
 
-The migration does not modify or delete content rows. It adds indexes, polymorphic authorization helpers, an atomic tag-sync function, and stricter policies. In particular, Contributor inserts and updates are restricted to `draft` or `submitted`.
+The migrations do not modify or delete content rows. They add indexes, polymorphic authorization helpers, an atomic tag-sync function, stricter content policies, and a single global appearance row with authenticated read and Admin-only update access. In particular, Contributor inserts and updates are restricted to `draft` or `submitted`.
+
+Appearance uses five curated, contrast-conscious presets instead of an unrestricted color picker. The portal layout reads the global setting on the server so navigation and content render in the selected theme without a client-side flash.
 
 ## Preview testing
 

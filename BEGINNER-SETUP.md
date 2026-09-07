@@ -32,7 +32,7 @@ If Supabase is not connected yet, the login page displays **Setup mode**. Use **
 
 The Supabase project is already named **TIKI**, and `supabase/migrations/202609060001_initial_tiki.sql` has already been run successfully. Do not run the initial migration a second time.
 
-For the content-management MVP, run `supabase/migrations/202609070001_content_management_mvp.sql` once in the Supabase SQL Editor. It preserves existing rows, adds supporting indexes and helper functions, and tightens RLS so Contributors cannot self-publish. The file is transactional: an error rolls back the whole migration.
+For the content-management MVP, run `supabase/migrations/202609070001_content_management_mvp.sql` and then `supabase/migrations/202609070002_site_appearance.sql` once each in the Supabase SQL Editor. They preserve existing content rows, add supporting indexes and helper functions, tighten RLS so Contributors cannot self-publish, and create the single global appearance-settings row. Both files are transactional: an error rolls back the whole migration.
 
 1. Open the Supabase `TIKI` project.
 2. Open the project **Connect** dialog or **Project Settings → API Keys**.
@@ -110,7 +110,7 @@ where email = 'YOUR_EMAIL_ADDRESS';
 
 Return to T.I.K.I. and choose **Check again**. The dashboard and Admin navigation should appear.
 
-After the first admin exists, use **Admin → People & access** to activate other profiles and assign roles.
+After the first admin exists, use **Admin → People & access** to activate other profiles and assign roles. The **Appearance** section on the same page changes the curated, site-wide T.I.K.I. theme; RLS allows only Admins to update it.
 
 ## Part F — Understand the roles
 

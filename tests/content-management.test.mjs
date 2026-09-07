@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 import { contentConfigs, getRecordDetail, getRecordMeta, getRecordTitle } from "../src/lib/content.ts";
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent, canSetStatus } from "../src/lib/content-rules.ts";
 import { buildSearchPattern, isSafeExternalUrl, isUuid, normalizeTags, slugifyTag, validateContentInput } from "../src/lib/content-validation.ts";
+import { defaultTheme, isThemePreset, resolveTheme, themePresets } from "../src/lib/theme.ts";
 
 const ownDraft = { created_by: "user-1", status: "draft" };
 const ownPublished = { created_by: "user-1", status: "published" };
@@ -78,6 +79,15 @@ describe("content validation and failure handling", () => {
     }
   });
 
+  it("keeps the vendor relationship separate from the record entity kind", () => {
+    const result = validateContentInput("vendor_client", "editor", {
+      name: "MVP Test Vendor", kind: "vendor", primary_contact: "QA", notes: "Temporary",
+      status: "draft", tags: "mvp-test", revision_note: "",
+    });
+    assert.equal(result.valid, true);
+    if (result.valid) assert.equal(result.payload.kind, "vendor");
+  });
+
   it("rejects reversed show dates and unauthorized publishing", () => {
     const result = validateContentInput("show", "contributor", {
       title: "MVP Test Show", client_name: "", location: "", start_date: "2026-09-10", end_date: "2026-09-09",
@@ -136,5 +146,23 @@ describe("Supabase RLS migration", () => {
     assert.match(sql, /can_edit_content\(entity_kind, entity_id\)/);
     assert.match(sql, /set_content_tags/);
     assert.doesNotMatch(sql, /service_role|sb_secret_/i);
+  });
+
+  it("protects the single global appearance row with admin-only updates", async () => {
+    const sql = await readFile(new URL("../supabase/migrations/202609070002_site_appearance.sql", import.meta.url), "utf8");
+    assert.match(sql, /id text primary key check \(id = 'global'\)/);
+    assert.match(sql, /site_settings_admin_update/);
+    assert.match(sql, /has_minimum_role\('admin'\)/);
+    assert.doesNotMatch(sql, /service_role|sb_secret_/i);
+  });
+});
+
+describe("global appearance settings", () => {
+  it("accepts only curated theme presets and falls back safely", () => {
+    assert.equal(themePresets.length, 5);
+    assert.equal(isThemePreset("lagoon"), true);
+    assert.equal(isThemePreset("neon-user-color"), false);
+    assert.equal(resolveTheme("night"), "night");
+    assert.equal(resolveTheme("not-a-theme"), defaultTheme);
   });
 });

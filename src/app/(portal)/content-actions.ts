@@ -39,7 +39,7 @@ async function syncTags(supabase: Awaited<ReturnType<typeof createClient>>, kind
 }
 
 export async function saveContentAction(_previous: ContentActionState, formData: FormData): Promise<ContentActionState> {
-  const kindValue = String(formData.get("kind") ?? "");
+  const kindValue = String(formData.get("_entity_kind") ?? "");
   if (!isEntityKind(kindValue)) return { ok: false, message: "Unknown content type." };
 
   const { identity, profile } = await getIdentityAndProfile();
@@ -114,7 +114,7 @@ export async function saveContentAction(_previous: ContentActionState, formData:
 }
 
 export async function archiveContentAction(_previous: ContentActionState, formData: FormData): Promise<ContentActionState> {
-  const kindValue = String(formData.get("kind") ?? "");
+  const kindValue = String(formData.get("_entity_kind") ?? "");
   const id = String(formData.get("id") ?? "");
   if (!isEntityKind(kindValue) || !id) return { ok: false, message: "The archive request was incomplete." };
   const { identity, profile } = await getIdentityAndProfile();
@@ -134,7 +134,7 @@ export async function archiveContentAction(_previous: ContentActionState, formDa
 }
 
 export async function deleteContentAction(_previous: ContentActionState, formData: FormData): Promise<ContentActionState> {
-  const kindValue = String(formData.get("kind") ?? "");
+  const kindValue = String(formData.get("_entity_kind") ?? "");
   const id = String(formData.get("id") ?? "");
   if (!isEntityKind(kindValue) || !id) return { ok: false, message: "The delete request was incomplete." };
   const { profile } = await getIdentityAndProfile();

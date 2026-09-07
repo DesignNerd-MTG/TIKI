@@ -17,6 +17,7 @@ T.I.K.I. is the map, not the territory. It indexes existing systems such as Drop
 - Global search across permitted content, Napkin notes, vendor/client context, and tags
 - T.I.K.I. Napkin capture, assignment, conversion tracking, and triage statuses
 - Admin activation and role controls with self-lockout protection
+- Admin-controlled, site-wide appearance presets with server-rendered themes
 - Netlify configuration, Node.js `24.17.0`, and production-domain documentation
 - Safe `/preview` route for viewing the interface before Supabase is connected
 

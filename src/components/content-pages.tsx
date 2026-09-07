@@ -168,7 +168,7 @@ export async function ContentDetailPage({
       {mayEdit ? (
         <section className="panel editor-panel">
           <div className="panel__heading"><div><p className="eyebrow">Role-aware controls</p><h2>Edit {config.singular.toLowerCase()}</h2></div></div>
-          <ContentEditor kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} profiles={(profilesResult.data ?? []) as Array<Pick<Profile, "id" | "email" | "full_name">>} />
+          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} profiles={(profilesResult.data ?? []) as Array<Pick<Profile, "id" | "email" | "full_name">>} />
         </section>
       ) : (
         <div className="notice notice--neutral">This record is read-only for your current role.</div>

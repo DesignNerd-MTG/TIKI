@@ -37,7 +37,7 @@ export function ContentEditor({
 
   return (
     <form action={action} className="content-form" noValidate>
-      <input type="hidden" name="kind" value={kind} />
+      <input type="hidden" name="_entity_kind" value={kind} />
       {record && <input type="hidden" name="id" value={record.id} />}
       {state.message && <div className={`notice ${state.ok ? "notice--success" : "notice--error"}`} role="status">{state.message}</div>}
       <div className="content-form__grid">
@@ -99,10 +99,10 @@ export function ContentEditor({
 
 export function ArchiveButton({ kind, id }: { kind: EntityKind; id: string }) {
   const [state, action] = useActionState(archiveContentAction, { ok: false, message: "" } satisfies ContentActionState);
-  return <div className="mutation-control"><form action={action}><input type="hidden" name="kind" value={kind} /><input type="hidden" name="id" value={id} /><button className="secondary-button" type="submit"><Archive size={15} /> Archive</button></form>{state.message && <span className={state.ok ? "inline-success" : "field-error"} role="status">{state.message}</span>}</div>;
+  return <div className="mutation-control"><form action={action}><input type="hidden" name="_entity_kind" value={kind} /><input type="hidden" name="id" value={id} /><button className="secondary-button" type="submit"><Archive size={15} /> Archive</button></form>{state.message && <span className={state.ok ? "inline-success" : "field-error"} role="status">{state.message}</span>}</div>;
 }
 
 export function DeleteButton({ kind, id, label }: { kind: EntityKind; id: string; label: string }) {
   const [state, action] = useActionState(deleteContentAction, { ok: false, message: "" } satisfies ContentActionState);
-  return <div className="mutation-control"><form action={action} onSubmit={(event) => { if (!window.confirm(`Permanently delete “${label}”? This cannot be undone.`)) event.preventDefault(); }}><input type="hidden" name="kind" value={kind} /><input type="hidden" name="id" value={id} /><button className="danger-button" type="submit">Delete permanently</button></form>{state.message && <span className="field-error" role="status">{state.message}</span>}</div>;
+  return <div className="mutation-control"><form action={action} onSubmit={(event) => { if (!window.confirm(`Permanently delete “${label}”? This cannot be undone.`)) event.preventDefault(); }}><input type="hidden" name="_entity_kind" value={kind} /><input type="hidden" name="id" value={id} /><button className="danger-button" type="submit">Delete permanently</button></form>{state.message && <span className="field-error" role="status">{state.message}</span>}</div>;
 }
