@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-
+import { redirectToPath } from "@/lib/http";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,15 +11,15 @@ export async function GET(request: Request) {
     : "/dashboard";
 
   if (!isSupabaseConfigured() || !code) {
-    return NextResponse.redirect(new URL("/login?error=auth_callback", requestUrl.origin));
+    return redirectToPath("/login?error=auth_callback");
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    return NextResponse.redirect(new URL("/login?error=auth_callback", requestUrl.origin));
+    return redirectToPath("/login?error=auth_callback");
   }
 
-  return NextResponse.redirect(new URL(next, requestUrl.origin));
+  return redirectToPath(next);
 }

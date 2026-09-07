@@ -1,13 +1,12 @@
-import { NextResponse } from "next/server";
-
+import { redirectToPath } from "@/lib/http";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
-export async function POST(request: Request) {
+export async function POST() {
   if (isSupabaseConfigured()) {
     const supabase = await createClient();
     await supabase.auth.signOut();
   }
 
-  return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
+  return redirectToPath("/login");
 }

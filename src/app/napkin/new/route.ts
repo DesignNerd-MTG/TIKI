@@ -1,12 +1,11 @@
-import { NextResponse } from "next/server";
-
 import { getIdentityAndProfile } from "@/lib/auth";
+import { redirectToPath } from "@/lib/http";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const { identity, profile } = await getIdentityAndProfile();
-  if (!identity) return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
-  if (!profile?.active) return NextResponse.redirect(new URL("/pending", request.url), { status: 303 });
+  if (!identity) return redirectToPath("/login");
+  if (!profile?.active) return redirectToPath("/pending");
 
   const form = await request.formData();
   const body = String(form.get("body") ?? "").trim();
@@ -14,7 +13,7 @@ export async function POST(request: Request) {
   const urgent = form.get("urgent") === "true";
 
   if (!body || body.length > 4000) {
-    return NextResponse.redirect(new URL("/napkin?error=validation", request.url), { status: 303 });
+    return redirectToPath("/napkin?error=validation");
   }
 
   const supabase = await createClient();
@@ -26,5 +25,5 @@ export async function POST(request: Request) {
   });
 
   const destination = error ? "/napkin?error=save" : "/napkin?saved=1";
-  return NextResponse.redirect(new URL(destination, request.url), { status: 303 });
+  return redirectToPath(destination);
 }

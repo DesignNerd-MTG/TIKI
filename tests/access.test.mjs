@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import { canAccess, hasMinimumRole, roleLabel } from "../src/lib/access.ts";
 import { getPortalEntryRoute } from "../src/lib/auth-routing.ts";
+import { redirectToPath } from "../src/lib/http.ts";
 
 describe("role access", () => {
   it("keeps the role hierarchy ordered", () => {
@@ -45,5 +46,18 @@ describe("portal entry routing", () => {
 
   it("sends an authenticated account with no profile to Access Pending", () => {
     assert.equal(getPortalEntryRoute(true, null), "/pending");
+  });
+});
+
+describe("same-origin redirects", () => {
+  it("keeps route-handler redirects relative to the visitor's hostname", () => {
+    const response = redirectToPath("/admin?saved=1");
+
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("location"), "/admin?saved=1");
+  });
+
+  it("rejects protocol-relative redirect targets", () => {
+    assert.throws(() => redirectToPath("//example.com"), /same-origin path/);
   });
 });
