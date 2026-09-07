@@ -65,6 +65,8 @@ describe("portal appearance presets", () => {
     assert.match(css, /\.form-field input:not\(\[type="checkbox"\]\)[\s\S]*background: var\(--control-fill\)/);
     assert.match(css, /\.theme-live-preview/);
     assert.match(css, /\[data-theme\][\s\S]*--slate: var\(--text-secondary\)/);
+    assert.match(css, /\[data-theme="night"\][^}]*--text-secondary: #ffffff/);
+    assert.match(css, /\[data-theme="night"\][^}]*--text-muted: #ffffff/);
   });
 
   it("protects the global setting with authenticated read and admin update RLS", async () => {
