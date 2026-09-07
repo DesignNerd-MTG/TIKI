@@ -3,7 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Archive, Save } from "lucide-react";
+import { Archive, PencilLine, Save } from "lucide-react";
 
 import { archiveContentAction, deleteContentAction, fileNapkinAction, saveContentAction, type ContentActionState } from "@/app/(portal)/content-actions";
 import { contentConfigs, filingDestinationKinds, getStatusLabel } from "@/lib/content";
@@ -17,6 +17,19 @@ function SubmitButton({ create, label }: { create: boolean; label?: string }) {
 function FileButton() {
   const { pending } = useFormStatus();
   return <button className="primary-button" type="submit" disabled={pending}>{pending ? "Filing…" : "Approve & File"}</button>;
+}
+
+export function EditButton() {
+  function moveToEditor() {
+    const editor = document.getElementById("edit-record");
+    if (!editor) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    editor.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    const firstField = editor.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>("input:not([type='hidden']), textarea, select");
+    window.setTimeout(() => firstField?.focus({ preventScroll: true }), reducedMotion ? 0 : 300);
+  }
+
+  return <button className="secondary-button" type="button" onClick={moveToEditor}><PencilLine size={15} /> Edit</button>;
 }
 
 export function ContentEditor({

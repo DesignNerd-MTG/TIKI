@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, LockKeyhole, PencilLine, Plus, Tags } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, LockKeyhole, Plus, Tags } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { ArchiveButton, ContentEditor, DeleteButton, FileNapkinControl } from "@/components/content-editor";
+import { ArchiveButton, ContentEditor, DeleteButton, EditButton, FileNapkinControl } from "@/components/content-editor";
 import { DatabaseNotice, EmptyState, PageHeader, RecordList, StatusPill } from "@/components/ui";
 import { contentConfigs, getRecordDetail, getRecordMeta, getRecordTitle } from "@/lib/content";
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent } from "@/lib/content-rules";
@@ -180,7 +180,7 @@ export async function ContentDetailPage({
       {saved && <div className="notice notice--success">{saved === "filed" ? "Approved, published, and filed from its original Napkin." : "Created and ready for the next pass."}</div>}
       <section className="detail-hero">
         <div><p className="eyebrow">{getRecordMeta(kind, record)}</p><h1>{title}</h1><p>Updated {formatDate(record.updated_at)}</p></div>
-        <div className="detail-hero__actions"><StatusPill status={String(record.status)} />{mayEdit && <a className="secondary-button" href="#edit-record"><PencilLine size={15} /> Edit</a>}{mayArchive && <ArchiveButton kind={kind} id={id} />}{record.status === "archived" && canDeleteContent(profile.role) && <DeleteButton kind={kind} id={id} label={title} />}</div>
+        <div className="detail-hero__actions"><StatusPill status={String(record.status)} />{mayEdit && <EditButton />}{mayArchive && <ArchiveButton kind={kind} id={id} />}{record.status === "archived" && canDeleteContent(profile.role) && <DeleteButton kind={kind} id={id} label={title} />}</div>
       </section>
 
       {tags.length > 0 && <div className="tag-list" aria-label="Tags"><Tags size={15} />{tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
