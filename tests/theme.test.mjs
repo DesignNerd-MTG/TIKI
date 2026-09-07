@@ -35,6 +35,7 @@ describe("portal appearance presets", () => {
     assert.equal(isThemePreset("night"), true);
     assert.equal(isThemePreset("custom-css"), false);
     assert.deepEqual(themePresets[0].swatches, ["#2b211b", "#5a4030", "#f06b3d", "#43b8c4"]);
+    assert.equal(themePresets[0].sidebar, "#18120f");
   });
 
   it("keeps text readable on every theme canvas", () => {
@@ -77,6 +78,9 @@ describe("portal appearance presets", () => {
     assert.match(css, /\.nav-link--active\s*{[^}]*background: var\(--sidebar-active\)/);
     assert.match(css, /\.nav-link--active::before\s*{[^}]*background: var\(--sidebar-accent\)/);
     assert.match(css, /\.brand__water\s*{[^}]*background: var\(--sidebar-accent\)/);
+    assert.match(css, /\.dashboard-hero\s*{[\s\S]*var\(--hero-gradient-start\)[\s\S]*var\(--hero-gradient-end\)/);
+    assert.match(css, /\.dashboard-hero__glow\s*{[^}]*background: var\(--hero-glow\)/);
+    assert.match(css, /\.hero-kicker\s*{[^}]*color: var\(--hero-kicker\)/);
   });
 
   it("keeps the Napkin card and capture form inside the active theme", async () => {

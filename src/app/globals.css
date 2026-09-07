@@ -27,6 +27,10 @@
   --sidebar-accent: #43b8c4;
   --sidebar-accent-alt: #e96e4f;
   --hero-bg: #12313a;
+  --hero-gradient-start: rgba(8, 25, 31, 0.94);
+  --hero-gradient-end: rgba(18, 62, 70, 0.9);
+  --hero-glow: rgba(233, 110, 79, 0.2);
+  --hero-kicker: #73d0c8;
   --ink: var(--text-primary);
   --ink-2: var(--hero-bg);
   --slate: var(--text-secondary);
@@ -74,7 +78,9 @@
   --surface-hover: #674a37;
   --control-fill: #211915;
   --topbar: rgba(52, 39, 31, 0.96);
-  --sidebar-bg: #172b31;
+  --sidebar-bg: #18120f;
+  --sidebar-hover: rgba(240, 107, 61, 0.1);
+  --sidebar-active: rgba(240, 107, 61, 0.18);
   --sidebar-accent: #43b8c4;
   --sidebar-accent-alt: #f06b3d;
   --text-primary: #fff1d6;
@@ -87,7 +93,11 @@
   --accent-link: #70d8db;
   --accent-soft: #1c4a4d;
   --focus-ring: rgba(67, 184, 196, 0.4);
-  --hero-bg: #172b31;
+  --hero-bg: #21130e;
+  --hero-gradient-start: rgba(24, 14, 11, 0.96);
+  --hero-gradient-end: rgba(92, 43, 25, 0.9);
+  --hero-glow: rgba(240, 107, 61, 0.28);
+  --hero-kicker: #e2b33f;
   --coral: #f06b3d;
   --coral-soft: #512b1e;
   --gold: #e2b33f;
@@ -124,6 +134,8 @@
   --control-fill: #182333;
   --topbar: rgba(36, 52, 72, 0.96);
   --sidebar-bg: #152235;
+  --sidebar-hover: rgba(69, 185, 209, 0.1);
+  --sidebar-active: rgba(69, 185, 209, 0.18);
   --sidebar-accent: #aac744;
   --sidebar-accent-alt: #45b9d1;
   --text-primary: #f5f4e8;
@@ -137,6 +149,10 @@
   --accent-soft: #1c4b59;
   --focus-ring: rgba(69, 185, 209, 0.42);
   --hero-bg: #142333;
+  --hero-gradient-start: rgba(15, 27, 43, 0.96);
+  --hero-gradient-end: rgba(35, 79, 101, 0.9);
+  --hero-glow: rgba(170, 199, 68, 0.22);
+  --hero-kicker: #aac744;
   --coral: #ed7a4d;
   --coral-soft: #4d2f25;
   --gold: #aac744;
@@ -173,6 +189,8 @@
   --control-fill: #2d1714;
   --topbar: rgba(71, 35, 29, 0.96);
   --sidebar-bg: #2a1513;
+  --sidebar-hover: rgba(242, 139, 34, 0.1);
+  --sidebar-active: rgba(240, 75, 46, 0.18);
   --sidebar-accent: #58b6c7;
   --sidebar-accent-alt: #e9b52e;
   --text-primary: #fff0d2;
@@ -186,6 +204,10 @@
   --accent-soft: #5b2f1c;
   --focus-ring: rgba(242, 139, 34, 0.42);
   --hero-bg: #281713;
+  --hero-gradient-start: rgba(42, 19, 15, 0.97);
+  --hero-gradient-end: rgba(116, 43, 25, 0.9);
+  --hero-glow: rgba(233, 181, 46, 0.23);
+  --hero-kicker: #58b6c7;
   --coral: #f04b2e;
   --coral-soft: #5d2118;
   --gold: #e9b52e;
@@ -222,6 +244,8 @@
   --control-fill: #162211;
   --topbar: rgba(37, 56, 29, 0.96);
   --sidebar-bg: #142313;
+  --sidebar-hover: rgba(148, 189, 62, 0.1);
+  --sidebar-active: rgba(148, 189, 62, 0.17);
   --sidebar-accent: #e86732;
   --sidebar-accent-alt: #59b7c5;
   --text-primary: #f5efcf;
@@ -235,6 +259,10 @@
   --accent-soft: #33451f;
   --focus-ring: rgba(148, 189, 62, 0.42);
   --hero-bg: #152216;
+  --hero-gradient-start: rgba(18, 34, 17, 0.97);
+  --hero-gradient-end: rgba(55, 83, 31, 0.9);
+  --hero-glow: rgba(232, 103, 50, 0.24);
+  --hero-kicker: #59b7c5;
   --coral: #e86732;
   --coral-soft: #4b2917;
   --gold: #d8a82e;
@@ -271,6 +299,8 @@
   --control-fill: #191121;
   --topbar: rgba(41, 28, 57, 0.96);
   --sidebar-bg: #171021;
+  --sidebar-hover: rgba(104, 199, 212, 0.1);
+  --sidebar-active: rgba(217, 75, 138, 0.18);
   --sidebar-accent: #d94b8a;
   --sidebar-accent-alt: #68c7d4;
   --text-primary: #ffffff;
@@ -284,6 +314,10 @@
   --accent-soft: #352949;
   --focus-ring: rgba(104, 199, 212, 0.44);
   --hero-bg: #171021;
+  --hero-gradient-start: rgba(23, 16, 33, 0.97);
+  --hero-gradient-end: rgba(67, 38, 83, 0.9);
+  --hero-glow: rgba(104, 199, 212, 0.22);
+  --hero-kicker: #afc93d;
   --coral: #d94b8a;
   --coral-soft: #4a1d37;
   --gold: #afc93d;
@@ -1417,7 +1451,7 @@ select:focus-visible {
   padding: clamp(34px, 5vw, 56px);
   border-radius: 22px;
   background:
-    linear-gradient(105deg, rgba(8, 25, 31, 0.94), rgba(18, 62, 70, 0.9)),
+    linear-gradient(105deg, var(--hero-gradient-start), var(--hero-gradient-end)),
     var(--hero-bg);
   color: #fff;
   box-shadow: 0 18px 44px rgba(16, 42, 51, 0.14);
@@ -1442,7 +1476,7 @@ select:focus-visible {
   width: 250px;
   height: 250px;
   border-radius: 50%;
-  background: rgba(233, 110, 79, 0.2);
+  background: var(--hero-glow);
   filter: blur(70px);
 }
 
@@ -1456,7 +1490,7 @@ select:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #73d0c8;
+  color: var(--hero-kicker);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.07em;

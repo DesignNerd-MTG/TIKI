@@ -5,7 +5,7 @@ export const themePresets = [
     description: "Dark teak, burnt orange, and poolside turquoise.",
     swatches: ["#2b211b", "#5a4030", "#f06b3d", "#43b8c4"],
     control: "#211915",
-    sidebar: "#172b31",
+    sidebar: "#18120f",
     sidebarText: "#fff1d6",
     text: "#fff1d6",
   },
