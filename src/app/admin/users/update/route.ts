@@ -1,5 +1,6 @@
 import { getIdentityAndProfile } from "@/lib/auth";
 import { redirectToPath } from "@/lib/http";
+import { isUuid } from "@/lib/content-validation";
 import { createClient } from "@/lib/supabase/server";
 import { roles, type AppRole } from "@/lib/types";
 
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
   const role = String(form.get("role") ?? "") as AppRole;
   const active = form.get("active") === "true";
 
-  if (!id || !roles.includes(role)) {
+  if (!isUuid(id) || !roles.includes(role)) {
     return redirectToPath("/admin?error=validation");
   }
 

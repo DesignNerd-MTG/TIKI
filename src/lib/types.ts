@@ -31,3 +31,26 @@ export type ContentStatus =
   | "verified"
   | "published"
   | "archived";
+
+export type NapkinStatus =
+  | "raw"
+  | "needs_review"
+  | "assigned"
+  | "converted"
+  | "archived";
+
+export type EntityKind =
+  | "fixture"
+  | "show"
+  | "document"
+  | "link"
+  | "vendor_client"
+  | "napkin";
+
+export type ManagedRecord = Record<string, unknown> & {
+  id: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  status: ContentStatus | NapkinStatus;
+};

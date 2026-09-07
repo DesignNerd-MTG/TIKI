@@ -6,9 +6,12 @@ import {
   ClipboardPenLine,
   FileText,
   Link2,
+  Plus,
   Search,
   Sparkles,
 } from "lucide-react";
+import { hasMinimumRole } from "@/lib/access";
+import type { AppRole } from "@/lib/types";
 
 const modules = [
   { href: "/fixtures", label: "Fixtures", description: "Modes, charts & field notes", icon: Boxes, key: "fixtures" },
@@ -24,10 +27,12 @@ export type DashboardSnapshot = {
     title: string;
     category: string;
     meta: string;
+    href: string;
+    updatedAt: string;
   }>;
 };
 
-export function DashboardView({ snapshot, preview = false }: { snapshot: DashboardSnapshot; preview?: boolean }) {
+export function DashboardView({ snapshot, preview = false, role = "viewer" }: { snapshot: DashboardSnapshot; preview?: boolean; role?: AppRole }) {
   const linkFor = (href: string) => (preview ? "/login" : href);
 
   return (
@@ -45,6 +50,16 @@ export function DashboardView({ snapshot, preview = false }: { snapshot: Dashboa
           </form>
         </div>
       </section>
+
+      {!preview && (
+        <section className="dashboard-actions" aria-label="Quick actions">
+          <div><p className="eyebrow">Quick actions</p><h2>Keep the index moving</h2></div>
+          <div className="page-actions">
+            <Link className="secondary-button" href="/napkin"><Plus size={15} /> Capture a Napkin</Link>
+            {hasMinimumRole(role, "contributor") && <Link className="primary-button" href="/fixtures/new"><Plus size={15} /> Add knowledge</Link>}
+          </div>
+        </section>
+      )}
 
       <section>
         <div className="section-heading">
@@ -82,10 +97,10 @@ export function DashboardView({ snapshot, preview = false }: { snapshot: Dashboa
           </div>
           <div className="recent-list">
             {snapshot.recent.length ? snapshot.recent.map((item) => (
-              <article className="recent-item" key={`${item.category}-${item.id}`}>
+              <Link className="recent-item" href={item.href} key={`${item.category}-${item.id}`}>
                 <span className="recent-item__badge">{item.category.slice(0, 1)}</span>
                 <div><strong>{item.title}</strong><span>{item.meta}</span></div>
-              </article>
+              </Link>
             )) : (
               <div className="compact-empty">Published updates will collect here as the team builds the index.</div>
             )}

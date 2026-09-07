@@ -23,12 +23,20 @@ export default async function AdminPage({
     .order("active")
     .order("created_at", { ascending: false });
   const profiles = (data ?? []) as Profile[];
+  const activeCount = profiles.filter((profile) => profile.active).length;
+  const pendingCount = profiles.length - activeCount;
+  const errorMessage = params.error === "self-lockout"
+    ? "T.I.K.I. prevented you from deactivating or demoting your own admin session."
+    : params.error === "validation"
+      ? "The requested role or profile was invalid."
+      : "The profile could not be updated.";
 
   return (
     <div className="page-stack">
       <PageHeader eyebrow="Administration" title="People & access" description="Supabase confirms identity; administrators activate each person and decide what T.I.K.I. lets them do." action={<span className="restricted-badge"><ShieldCheck size={15} /> Admin only</span>} />
       {params.saved && <div className="notice notice--success"><Check size={18} /> Access profile updated.</div>}
-      {params.error && <div className="notice notice--error">The profile could not be updated.</div>}
+      {params.error && <div className="notice notice--error">{errorMessage}</div>}
+      {!error && <div className="admin-summary" aria-label="Access summary"><span><strong>{activeCount}</strong> active</span><span><strong>{pendingCount}</strong> pending</span><span><strong>{profiles.length}</strong> total</span></div>}
       {error ? <DatabaseNotice /> : profiles.length ? (
         <div className="admin-list">
           {profiles.map((profile) => (
@@ -39,7 +47,7 @@ export default async function AdminPage({
                 <span>{profile.email}</span>
                 <small>Joined {formatDate(profile.created_at)}</small>
               </div>
-              <form className="admin-user__controls" action="/admin/users/update" method="post">
+              <form className="admin-user__controls" action="/admin/users/update" method="post" aria-label={`Access settings for ${profile.full_name || profile.email}`}>
                 <input type="hidden" name="id" value={profile.id} />
                 <label>
                   <span>Role</span>

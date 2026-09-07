@@ -2,20 +2,28 @@ import type { Metadata } from "next";
 import { AlertTriangle } from "lucide-react";
 
 import { DashboardView, type DashboardSnapshot } from "@/components/dashboard-view";
+import { requireActiveProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-async function getDashboardSnapshot(): Promise<{ snapshot: DashboardSnapshot; databaseReady: boolean }> {
+async function getDashboardSnapshot(canSeeRestricted: boolean): Promise<{ snapshot: DashboardSnapshot; databaseReady: boolean }> {
   const supabase = await createClient();
-  const [fixtures, shows, links, documents, napkin, recentFixtures, recentShows] = await Promise.all([
-    supabase.from("fixtures").select("id", { count: "exact", head: true }),
-    supabase.from("shows").select("id", { count: "exact", head: true }),
-    supabase.from("link_items").select("id", { count: "exact", head: true }),
-    supabase.from("documents").select("id", { count: "exact", head: true }),
+  const vendorCount = canSeeRestricted ? supabase.from("vendor_clients").select("id", { count: "exact", head: true }).neq("status", "archived") : Promise.resolve({ count: 0, error: null });
+  const recentVendors = canSeeRestricted ? supabase.from("vendor_clients").select("id,name,kind,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(3) : Promise.resolve({ data: [] });
+  const [fixtures, shows, links, documents, napkin, vendors, recentFixtures, recentShows, recentLinks, recentDocuments, recentNapkin, vendorRecent] = await Promise.all([
+    supabase.from("fixtures").select("id", { count: "exact", head: true }).neq("status", "archived"),
+    supabase.from("shows").select("id", { count: "exact", head: true }).neq("status", "archived"),
+    supabase.from("link_items").select("id", { count: "exact", head: true }).neq("status", "archived"),
+    supabase.from("documents").select("id", { count: "exact", head: true }).neq("status", "archived"),
     supabase.from("napkin_notes").select("id", { count: "exact", head: true }).neq("status", "archived"),
-    supabase.from("fixtures").select("id,name,manufacturer,updated_at").order("updated_at", { ascending: false }).limit(3),
-    supabase.from("shows").select("id,title,location,updated_at").order("updated_at", { ascending: false }).limit(2),
+    vendorCount,
+    supabase.from("fixtures").select("id,name,manufacturer,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(3),
+    supabase.from("shows").select("id,title,location,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(2),
+    supabase.from("link_items").select("id,label,category,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(2),
+    supabase.from("documents").select("id,title,document_type,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(2),
+    supabase.from("napkin_notes").select("id,body,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(2),
+    recentVendors,
   ]);
 
   const databaseReady = !fixtures.error;
@@ -25,14 +33,22 @@ async function getDashboardSnapshot(): Promise<{ snapshot: DashboardSnapshot; da
       title: item.name,
       category: "Fixture",
       meta: `${item.manufacturer || "Manufacturer pending"} · updated recently`,
+      href: `/fixtures/${item.id}`,
+      updatedAt: item.updated_at,
     })),
     ...(recentShows.data ?? []).map((item) => ({
       id: item.id,
       title: item.title,
       category: "Show",
       meta: `${item.location || "Location pending"} · updated recently`,
+      href: `/shows/${item.id}`,
+      updatedAt: item.updated_at,
     })),
-  ].slice(0, 5);
+    ...(recentLinks.data ?? []).map((item) => ({ id: item.id, title: item.label, category: "Link", meta: item.category, href: `/links/${item.id}`, updatedAt: item.updated_at })),
+    ...(recentDocuments.data ?? []).map((item) => ({ id: item.id, title: item.title, category: "Document", meta: item.document_type || "Reference document", href: `/documents/${item.id}`, updatedAt: item.updated_at })),
+    ...(recentNapkin.data ?? []).map((item) => ({ id: item.id, title: item.body.length > 70 ? `${item.body.slice(0, 70)}…` : item.body, category: "Napkin", meta: "Working knowledge", href: `/napkin/${item.id}`, updatedAt: item.updated_at })),
+    ...(vendorRecent.data ?? []).map((item) => ({ id: item.id, title: item.name, category: "Vendor", meta: item.kind, href: `/vendors/${item.id}`, updatedAt: item.updated_at })),
+  ].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 7);
 
   return {
     databaseReady,
@@ -43,6 +59,7 @@ async function getDashboardSnapshot(): Promise<{ snapshot: DashboardSnapshot; da
         links: links.count ?? 0,
         documents: documents.count ?? 0,
         napkin: napkin.count ?? 0,
+        vendors: vendors.count ?? 0,
       },
       recent,
     },
@@ -54,10 +71,8 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ notice?: string }>;
 }) {
-  const [{ snapshot, databaseReady }, params] = await Promise.all([
-    getDashboardSnapshot(),
-    searchParams,
-  ]);
+  const [{ profile }, params] = await Promise.all([requireActiveProfile(), searchParams]);
+  const { snapshot, databaseReady } = await getDashboardSnapshot(profile.role === "editor" || profile.role === "admin");
 
   return (
     <>
@@ -73,7 +88,7 @@ export default async function DashboardPage({
           <div><strong>The portal is connected, but its tables are not ready.</strong><span>Run the initial Supabase migration from the setup guide.</span></div>
         </div>
       )}
-      <DashboardView snapshot={snapshot} />
+      <DashboardView snapshot={snapshot} role={profile.role} />
     </>
   );
 }

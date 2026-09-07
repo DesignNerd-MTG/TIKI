@@ -106,7 +106,7 @@ export function AppShell({ children, name, email, role }: AppShellProps) {
           </button>
           <form className="global-search" action="/search" method="get" role="search">
             <Search size={18} aria-hidden="true" />
-            <input name="q" type="search" placeholder="Search fixtures, shows, documents, links…" aria-label="Search T.I.K.I." />
+            <input name="q" type="search" maxLength={100} placeholder="Search content, notes, and tags…" aria-label="Search T.I.K.I." />
             <kbd>Enter</kbd>
           </form>
           <div className="topbar__identity">

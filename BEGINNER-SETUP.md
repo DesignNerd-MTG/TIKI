@@ -32,6 +32,8 @@ If Supabase is not connected yet, the login page displays **Setup mode**. Use **
 
 The Supabase project is already named **TIKI**, and `supabase/migrations/202609060001_initial_tiki.sql` has already been run successfully. Do not run the initial migration a second time.
 
+For the content-management MVP, run `supabase/migrations/202609070001_content_management_mvp.sql` once in the Supabase SQL Editor. It preserves existing rows, adds supporting indexes and helper functions, and tightens RLS so Contributors cannot self-publish. The file is transactional: an error rolls back the whole migration.
+
 1. Open the Supabase `TIKI` project.
 2. Open the project **Connect** dialog or **Project Settings → API Keys**.
 3. Copy the **Project URL**.
@@ -112,10 +114,10 @@ After the first admin exists, use **Admin → People & access** to activate othe
 
 ## Part F — Understand the roles
 
-- **Viewer:** reads published knowledge and captures personal Napkin notes.
-- **Contributor:** also submits draft knowledge as editing forms are added.
-- **Editor:** reviews content, triages Napkin notes, and enters Vendors / Clients.
-- **Admin:** also activates people, changes roles, and manages access.
+- **Viewer:** reads verified/published knowledge and captures, edits, or archives personal raw Napkin notes.
+- **Contributor:** also creates drafts, edits their own working records, and submits them for review.
+- **Editor:** reviews all content, changes publication status, triages Napkin notes, and manages Vendors / Clients.
+- **Admin:** also activates people, changes roles, and permanently deletes records after they are archived.
 
 No authenticated person sees portal content until their profile is active. Supabase Row Level Security remains the hard guardrail even if someone manually types a restricted URL.
 
@@ -130,6 +132,9 @@ Check all of these before deployment:
 5. Confirm that the viewer cannot open `/vendors` or `/admin` by typing those URLs.
 6. On the login page, choose **Forgot password?** and confirm the reset email returns to T.I.K.I.
 7. Save a note in **T.I.K.I. Napkin**.
+8. As a Contributor, create a clearly labeled test draft and submit it; confirm publishing is unavailable.
+9. As an Editor, verify or publish the test record, then archive it.
+10. As an Admin, permanently delete only that archived test record.
 
 ## Part H — Run project checks
 

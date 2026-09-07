@@ -1,0 +1,143 @@
+import type { AppRole, EntityKind, ManagedRecord } from "@/lib/types";
+
+export const contentStatuses = ["draft", "submitted", "verified", "published", "archived"] as const;
+export const napkinStatuses = ["raw", "needs_review", "assigned", "converted", "archived"] as const;
+
+export type FieldDefinition = {
+  name: string;
+  label: string;
+  type: "text" | "textarea" | "url" | "number" | "date" | "select" | "checkbox";
+  required?: boolean;
+  placeholder?: string;
+  help?: string;
+  options?: Array<{ value: string; label: string }>;
+  wide?: boolean;
+  maxLength?: number;
+};
+
+export type ContentConfig = {
+  kind: EntityKind;
+  table: string;
+  route: string;
+  singular: string;
+  plural: string;
+  eyebrow: string;
+  description: string;
+  minimumCreateRole: AppRole;
+  restricted?: boolean;
+  titleField: string;
+  fields: FieldDefinition[];
+};
+
+export const contentConfigs: Record<EntityKind, ContentConfig> = {
+  fixture: {
+    kind: "fixture", table: "fixtures", route: "/fixtures", singular: "Fixture", plural: "Fixtures",
+    eyebrow: "Published knowledge", description: "Answer-first fixture references: preferred modes, DMX charts, documents, and field-proven notes.",
+    minimumCreateRole: "contributor", titleField: "name",
+    fields: [
+      { name: "name", label: "Fixture name", type: "text", required: true, maxLength: 160 },
+      { name: "manufacturer", label: "Manufacturer", type: "text", maxLength: 120 },
+      { name: "fixture_type", label: "Fixture type", type: "text", maxLength: 120 },
+      { name: "preferred_mode", label: "LDG preferred mode", type: "text", maxLength: 160 },
+      { name: "dmx_footprint", label: "DMX footprint", type: "number", help: "Positive channel count." },
+      { name: "typical_use", label: "Typical use", type: "text", maxLength: 240 },
+      { name: "power_note", label: "Power notes", type: "textarea", maxLength: 4000, wide: true },
+      { name: "control_note", label: "Data / control notes", type: "textarea", maxLength: 4000, wide: true },
+      { name: "field_notes", label: "Field notes", type: "textarea", maxLength: 4000, wide: true },
+      { name: "dmx_chart_url", label: "DMX chart URL", type: "url", placeholder: "https://…" },
+      { name: "manual_url", label: "Manufacturer manual URL", type: "url", placeholder: "https://…" },
+    ],
+  },
+  show: {
+    kind: "show", table: "shows", route: "/shows", singular: "Show", plural: "Shows",
+    eyebrow: "Published knowledge", description: "The clean index above existing show folders, key documents, reference files, and current links.",
+    minimumCreateRole: "contributor", titleField: "title",
+    fields: [
+      { name: "title", label: "Show title", type: "text", required: true, maxLength: 160 },
+      { name: "client_name", label: "Client", type: "text", maxLength: 160 },
+      { name: "location", label: "Location", type: "text", maxLength: 240 },
+      { name: "start_date", label: "Start date", type: "date" },
+      { name: "end_date", label: "End date", type: "date" },
+      { name: "primary_link", label: "Authoritative show URL", type: "url", placeholder: "https://…", wide: true },
+      { name: "summary", label: "Show summary", type: "textarea", maxLength: 4000, wide: true },
+    ],
+  },
+  link: {
+    kind: "link", table: "link_items", route: "/links", singular: "Link", plural: "Link Hub",
+    eyebrow: "Daily tools", description: "Fast routes to timesheets, expenses, downloads, show folders, and department systems.",
+    minimumCreateRole: "contributor", titleField: "label",
+    fields: [
+      { name: "label", label: "Link label", type: "text", required: true, maxLength: 160 },
+      { name: "category", label: "Category", type: "text", required: true, maxLength: 80, placeholder: "Operations" },
+      { name: "url", label: "Authoritative URL", type: "url", required: true, placeholder: "https://…", wide: true },
+      { name: "description", label: "Description", type: "textarea", maxLength: 2000, wide: true },
+    ],
+  },
+  document: {
+    kind: "document", table: "documents", route: "/documents", singular: "Document", plural: "Documents",
+    eyebrow: "Published knowledge", description: "A searchable index of authoritative manuals, charts, paperwork, and external document locations.",
+    minimumCreateRole: "contributor", titleField: "title",
+    fields: [
+      { name: "title", label: "Document title", type: "text", required: true, maxLength: 160 },
+      { name: "document_type", label: "Document type", type: "text", maxLength: 100, placeholder: "Manual, plot, policy…" },
+      { name: "url", label: "Authoritative document URL", type: "url", required: true, placeholder: "https://…", wide: true },
+      { name: "description", label: "Description", type: "textarea", maxLength: 2000, wide: true },
+    ],
+  },
+  vendor_client: {
+    kind: "vendor_client", table: "vendor_clients", route: "/vendors", singular: "Vendor / client", plural: "Vendors & clients",
+    eyebrow: "Restricted area", description: "Sensitive operational context for editors and administrators only.",
+    minimumCreateRole: "editor", restricted: true, titleField: "name",
+    fields: [
+      { name: "name", label: "Organization name", type: "text", required: true, maxLength: 160 },
+      { name: "kind", label: "Relationship", type: "select", required: true, options: [{ value: "vendor", label: "Vendor" }, { value: "client", label: "Client" }] },
+      { name: "primary_contact", label: "Primary contact", type: "text", maxLength: 240 },
+      { name: "notes", label: "Operational notes", type: "textarea", maxLength: 4000, wide: true },
+    ],
+  },
+  napkin: {
+    kind: "napkin", table: "napkin_notes", route: "/napkin", singular: "Napkin note", plural: "T.I.K.I. Napkin",
+    eyebrow: "Working knowledge", description: "A forgiving landing place for useful information that is not clean, classified, or verified yet.",
+    minimumCreateRole: "viewer", titleField: "body",
+    fields: [
+      { name: "body", label: "What should we remember?", type: "textarea", required: true, maxLength: 4000, wide: true },
+      { name: "source_url", label: "Source URL", type: "url", placeholder: "https://…", wide: true },
+      { name: "urgent", label: "Mark important", type: "checkbox" },
+    ],
+  },
+};
+
+export function getRecordTitle(kind: EntityKind, record: Record<string, unknown>) {
+  const value = record[contentConfigs[kind].titleField];
+  const title = typeof value === "string" ? value : "Untitled";
+  return kind === "napkin" && title.length > 92 ? `${title.slice(0, 92)}…` : title;
+}
+
+export function getRecordMeta(kind: EntityKind, record: Record<string, unknown>) {
+  const strings = (...values: unknown[]) => values.filter((value): value is string => typeof value === "string" && value.length > 0);
+  switch (kind) {
+    case "fixture": return strings(record.manufacturer, record.fixture_type).join(" · ") || "Fixture details pending";
+    case "show": return strings(record.client_name, record.location).join(" · ") || "Show details pending";
+    case "link": return typeof record.category === "string" ? record.category : "General";
+    case "document": return typeof record.document_type === "string" && record.document_type ? record.document_type : "Reference document";
+    case "vendor_client": return strings(record.kind, record.primary_contact).join(" · ") || "Contact details pending";
+    case "napkin": return record.urgent ? "Important field note" : "Working knowledge";
+  }
+}
+
+export function getRecordDetail(kind: EntityKind, record: Record<string, unknown>) {
+  const keys: Record<EntityKind, string[]> = {
+    fixture: ["preferred_mode", "typical_use"], show: ["summary"], link: ["description"],
+    document: ["description"], vendor_client: ["notes"], napkin: ["source_url"],
+  };
+  for (const key of keys[kind]) {
+    const value = record[key];
+    if (typeof value === "string" && value) return value;
+  }
+  return null;
+}
+
+export function asManagedRecord(value: unknown): ManagedRecord | null {
+  if (!value || typeof value !== "object" || !("id" in value)) return null;
+  return value as ManagedRecord;
+}

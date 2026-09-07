@@ -12,14 +12,15 @@ T.I.K.I. is the map, not the territory. It indexes existing systems such as Drop
 - Viewer, contributor, editor, and admin roles
 - Access Pending state for authenticated people who are not activated
 - Supabase Row Level Security, including the restricted Vendors / Clients area
-- Dashboard and global search shell
-- Fixtures, Shows, Link Hub, Documents, Vendors / Clients, and Admin modules
-- T.I.K.I. Napkin for quick, informal capture of unverified production knowledge
-- Working Napkin capture and admin activation controls
+- Dashboard with live counts, recent updates, and role-aware quick actions
+- Complete create, detail, edit, status, tag, revision, archive, and safe-delete workflows
+- Global search across permitted content, Napkin notes, vendor/client context, and tags
+- T.I.K.I. Napkin capture, assignment, conversion tracking, and triage statuses
+- Admin activation and role controls with self-lockout protection
 - Netlify configuration, Node.js `24.17.0`, and production-domain documentation
 - Safe `/preview` route for viewing the interface before Supabase is connected
 
-Intentionally deferred: AI assistant, travel/flight tracking, crew/Airtable integration, native mobile apps, packet builder, automated manufacturer scraping, and any attempt to replace Dropbox.
+Intentionally deferred: file storage, Dropbox synchronization, Google OAuth, AI ingestion/assistant, custom SMTP, travel/flight tracking, crew/Airtable integration, native mobile apps, packet builder, and automated manufacturer scraping.
 
 ## Canonical project
 
@@ -79,4 +80,4 @@ netlify.toml             Netlify build configuration
 
 Deployment path: **local development → GitHub → Netlify → Supabase**.
 
-See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) and [docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md).
+See [docs/CONTENT-MANAGEMENT.md](./docs/CONTENT-MANAGEMENT.md), [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md), and [docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md).

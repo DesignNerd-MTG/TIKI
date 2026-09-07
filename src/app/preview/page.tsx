@@ -10,9 +10,9 @@ export const metadata: Metadata = { title: "Portal preview" };
 const previewSnapshot = {
   counts: { fixtures: 12, shows: 4, links: 18, documents: 27, napkin: 6 },
   recent: [
-    { id: "1", title: "ColorForce II 72", category: "Fixture", meta: "Preferred mode reviewed" },
-    { id: "2", title: "Broadcast package reference", category: "Show", meta: "Dropbox link updated" },
-    { id: "3", title: "Proteus Maximus field note", category: "Fixture", meta: "Control note verified" },
+    { id: "1", title: "ColorForce II 72", category: "Fixture", meta: "Preferred mode reviewed", href: "/login", updatedAt: "2026-09-07T00:00:00Z" },
+    { id: "2", title: "Broadcast package reference", category: "Show", meta: "Dropbox link updated", href: "/login", updatedAt: "2026-09-06T00:00:00Z" },
+    { id: "3", title: "Proteus Maximus field note", category: "Fixture", meta: "Control note verified", href: "/login", updatedAt: "2026-09-05T00:00:00Z" },
   ],
 };
 
