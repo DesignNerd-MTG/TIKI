@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, LockKeyhole, Plus, Tags } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, LockKeyhole, PencilLine, Plus, Tags } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -137,7 +137,7 @@ export async function ContentCreatePage({ kind }: { kind: EntityKind }) {
     <div className="page-stack">
       <Link className="back-link" href={config.route}><ArrowLeft size={16} /> Back to {config.plural.toLowerCase()}</Link>
       <PageHeader eyebrow="New record" title={`Add ${config.singular.toLowerCase()}`} description={profile.role === "admin" ? "Administrator entries publish immediately unless you choose another status." : "Start with what is known. Drafts can be refined and submitted for review later."} />
-      <section className="panel editor-panel"><ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind)} defaultStatus={profile.role === "admin" ? "published" : undefined} /></section>
+      <section className="panel editor-panel"><ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} /></section>
     </div>
   );
 }
@@ -180,7 +180,7 @@ export async function ContentDetailPage({
       {saved && <div className="notice notice--success">{saved === "filed" ? "Approved, published, and filed from its original Napkin." : "Created and ready for the next pass."}</div>}
       <section className="detail-hero">
         <div><p className="eyebrow">{getRecordMeta(kind, record)}</p><h1>{title}</h1><p>Updated {formatDate(record.updated_at)}</p></div>
-        <div className="detail-hero__actions"><StatusPill status={String(record.status)} />{mayArchive && <ArchiveButton kind={kind} id={id} />}{record.status === "archived" && canDeleteContent(profile.role) && <DeleteButton kind={kind} id={id} label={title} />}</div>
+        <div className="detail-hero__actions"><StatusPill status={String(record.status)} />{mayEdit && <a className="secondary-button" href="#edit-record"><PencilLine size={15} /> Edit</a>}{mayArchive && <ArchiveButton kind={kind} id={id} />}{record.status === "archived" && canDeleteContent(profile.role) && <DeleteButton kind={kind} id={id} label={title} />}</div>
       </section>
 
       {tags.length > 0 && <div className="tag-list" aria-label="Tags"><Tags size={15} />{tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
@@ -215,7 +215,7 @@ export async function ContentDetailPage({
       </section>
 
       {mayEdit ? (
-        <section className="panel editor-panel">
+        <section className="panel editor-panel" id="edit-record">
           <div className="panel__heading"><div><p className="eyebrow">Role-aware controls</p><h2>Edit {config.singular.toLowerCase()}</h2></div></div>
           <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} adminCanPublishWithoutRevision={profile.role === "admin"} />
         </section>

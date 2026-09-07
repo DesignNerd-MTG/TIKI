@@ -9,9 +9,9 @@ import { archiveContentAction, deleteContentAction, fileNapkinAction, saveConten
 import { contentConfigs, filingDestinationKinds, getStatusLabel } from "@/lib/content";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
 
-function SubmitButton({ create }: { create: boolean }) {
+function SubmitButton({ create, label }: { create: boolean; label?: string }) {
   const { pending } = useFormStatus();
-  return <button className="primary-button" type="submit" disabled={pending}>{pending ? "Saving…" : <><Save size={16} /> {create ? "Create" : "Save changes"}</>}</button>;
+  return <button className="primary-button" type="submit" disabled={pending}>{pending ? "Saving…" : <><Save size={16} /> {label ?? (create ? "Create" : "Save changes")}</>}</button>;
 }
 
 function FileButton() {
@@ -50,7 +50,7 @@ export function ContentEditor({
       {record && <input type="hidden" name="id" value={record.id} />}
       {state.message && <div className={`notice ${state.ok ? "notice--success" : "notice--error"}`} role="status">{state.message}</div>}
       <div className="content-form__grid">
-        {config.fields.map((field) => {
+        {config.fields.map((field, index) => {
           const error = state.fieldErrors?.[field.name];
           const value = record?.[field.name];
           const className = field.wide ? "form-field form-field--wide" : "form-field";
@@ -58,13 +58,13 @@ export function ContentEditor({
             <label className={className} key={field.name}>
               <span>{field.label}{field.required && <em> required</em>}</span>
               {field.type === "textarea" ? (
-                <textarea name={field.name} defaultValue={typeof value === "string" ? value : ""} maxLength={field.maxLength} rows={field.name === "body" ? 7 : 4} aria-invalid={Boolean(error)} />
+                <textarea name={field.name} defaultValue={typeof value === "string" ? value : ""} maxLength={field.maxLength} rows={field.name === "body" ? 7 : 4} aria-invalid={Boolean(error)} autoFocus={!record && index === 0} />
               ) : field.type === "select" ? (
                 <select name={field.name} defaultValue={typeof value === "string" ? value : field.options?.[0]?.value} aria-invalid={Boolean(error)}>{field.options?.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select>
               ) : field.type === "checkbox" ? (
                 <span className="check-control"><input name={field.name} type="checkbox" value="true" defaultChecked={value === true} /> Yes</span>
               ) : (
-                <input name={field.name} type={field.type} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} required={field.required} maxLength={field.maxLength} placeholder={field.placeholder} aria-invalid={Boolean(error)} />
+                <input name={field.name} type={field.type} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} required={field.required} maxLength={field.maxLength} placeholder={field.placeholder} aria-invalid={Boolean(error)} autoFocus={!record && index === 0} />
               )}
               {field.help && <small>{field.help}</small>}
               {error && <small className="field-error">{error}</small>}
@@ -91,14 +91,14 @@ export function ContentEditor({
           <small>Comma-separated, up to 12 tags.</small>
           {state.fieldErrors?.tags && <small className="field-error">{state.fieldErrors.tags}</small>}
         </label>
-        <label className="form-field form-field--wide">
+        {!(kind === "napkin" && !record) && <label className="form-field form-field--wide">
           <span>Revision note</span>
           <textarea name="revision_note" rows={2} maxLength={500} placeholder={record ? "What changed, and why?" : "Optional source or context for the first revision"} aria-invalid={Boolean(state.fieldErrors?.revision_note)} />
-          <small>{kind === "napkin" && !record ? "Optional source or context for this stored note." : adminCanPublishWithoutRevision ? "Optional when publishing as an administrator; other status changes require a note." : "Status changes require a revision note."}</small>
+          <small>{!record ? "Optional context for the audit trail." : adminCanPublishWithoutRevision ? "Optional when publishing as an administrator; other status changes require a note." : "Status changes require a revision note."}</small>
           {state.fieldErrors?.revision_note && <small className="field-error">{state.fieldErrors.revision_note}</small>}
-        </label>
+        </label>}
       </div>
-      <div className="content-form__actions"><SubmitButton create={!record} /></div>
+      <div className="content-form__actions"><SubmitButton create={!record} label={kind === "napkin" && !record ? "Store Napkin" : undefined} /></div>
     </form>
   );
 }

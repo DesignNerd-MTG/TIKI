@@ -119,6 +119,14 @@ describe("content validation and failure handling", () => {
     assert.equal(adminResult.valid, true);
   });
 
+  it("does not create records directly inside the archive", () => {
+    const result = validateContentInput("link", "admin", {
+      label: "Old portal", category: "Operations", url: "https://example.com", description: "", status: "archived", tags: "", revision_note: "",
+    });
+    assert.equal(result.valid, false);
+    if (!result.valid) assert.match(result.fieldErrors.status, /before archiving/i);
+  });
+
   it("allows only complete HTTP(S) external URLs", () => {
     assert.equal(isSafeExternalUrl("https://example.com/manual.pdf"), true);
     assert.equal(isSafeExternalUrl("ftp://example.com/file"), false);
@@ -249,10 +257,20 @@ describe("Supabase RLS migration", () => {
     assert.match(sql, /status <> 'archived' or public\.has_minimum_role\('editor'\)/i);
     assert.doesNotMatch(editor, /Assigned to/);
     assert.match(editor, /Approve & File/);
+    assert.match(editor, /Store Napkin/);
     assert.match(navigation, /Pile of Napkins/);
     assert.match(navigation, /Napkin Queue/);
     assert.match(dashboard, /Capture a Napkin/);
     assert.doesNotMatch(dashboard, /Add knowledge|href="\/fixtures\/new"/i);
+  });
+
+  it("keeps new capture and existing-record editing quick", async () => {
+    const editor = await readFile(new URL("../src/components/content-editor.tsx", import.meta.url), "utf8");
+    const pages = await readFile(new URL("../src/components/content-pages.tsx", import.meta.url), "utf8");
+    assert.match(editor, /autoFocus={!record && index === 0}/);
+    assert.match(editor, /!\(kind === "napkin" && !record\)/);
+    assert.match(pages, /href="#edit-record"/);
+    assert.match(pages, /id="edit-record"/);
   });
 
   it("files approved Napkins into published destination records atomically", async () => {

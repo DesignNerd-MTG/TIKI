@@ -65,6 +65,7 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
 
   const status = String(input.status ?? (kind === "napkin" ? "raw" : "draft"));
   if (!canSetStatus(role, kind, status)) errors.status = "Your role cannot set that status.";
+  if (!previousStatus && status === "archived") errors.status = "Create the record before archiving it.";
   payload.status = status;
 
   if (kind === "show") {
