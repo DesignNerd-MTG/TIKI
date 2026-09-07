@@ -1,0 +1,31 @@
+# dependencies
+/node_modules
+
+# Next.js
+/.next/
+/out/
+
+# production
+/build
+
+# local environment files
+.env*
+!.env.example
+
+# test and tooling
+/coverage
+*.tsbuildinfo
+next-env.d.ts
+
+# operating systems and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Netlify
+/.netlify
+
+# Codex/ChatGPT project mirror metadata (not part of the application)
+/AGENTS.md
+/sources/
