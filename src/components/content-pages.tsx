@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowUpRight, LockKeyhole, Plus, Tags } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import { ArchiveButton, ContentEditor, DeleteButton } from "@/components/content-editor";
+import { ArchiveButton, ContentEditor, DeleteButton, FileNapkinControl } from "@/components/content-editor";
 import { DatabaseNotice, EmptyState, PageHeader, RecordList, StatusPill } from "@/components/ui";
 import { contentConfigs, getRecordDetail, getRecordMeta, getRecordTitle } from "@/lib/content";
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent } from "@/lib/content-rules";
@@ -106,8 +106,8 @@ export async function ContentCreatePage({ kind }: { kind: EntityKind }) {
   return (
     <div className="page-stack">
       <Link className="back-link" href={config.route}><ArrowLeft size={16} /> Back to {config.plural.toLowerCase()}</Link>
-      <PageHeader eyebrow="New record" title={`Add ${config.singular.toLowerCase()}`} description="Start with what is known. Drafts can be refined and submitted for review later." />
-      <section className="panel editor-panel"><ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind)} /></section>
+      <PageHeader eyebrow="New record" title={`Add ${config.singular.toLowerCase()}`} description={profile.role === "admin" ? "Administrator entries publish immediately unless you choose another status." : "Start with what is known. Drafts can be refined and submitted for review later."} />
+      <section className="panel editor-panel"><ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind)} defaultStatus={profile.role === "admin" ? "published" : undefined} /></section>
     </div>
   );
 }
@@ -138,17 +138,26 @@ export async function ContentDetailPage({
   const title = getRecordTitle(kind, record);
   const externalFields = config.fields.filter((field) => field.type === "url" && stringify(record[field.name]));
   const detailFields = config.fields.filter((field) => (kind === "napkin" || field.name !== config.titleField) && field.type !== "url" && stringify(record[field.name]));
+  const filingKind = typeof record.converted_to_kind === "string" && record.converted_to_kind in contentConfigs && record.converted_to_kind !== "napkin" ? record.converted_to_kind as EntityKind : null;
+  const filingId = typeof record.converted_to_id === "string" ? record.converted_to_id : null;
+  const filingDestination = filingKind && filingId ? { config: contentConfigs[filingKind], href: `${contentConfigs[filingKind].route}/${filingId}` } : null;
+  const canFileNapkin = kind === "napkin" && mayEdit && (record.status === "raw" || record.status === "needs_review");
+  const backRoute = kind === "napkin" ? "/napkin/pile" : config.route;
 
   return (
     <div className="page-stack">
-      <Link className="back-link" href={config.route}><ArrowLeft size={16} /> Back to {config.plural.toLowerCase()}</Link>
-      {saved && <div className="notice notice--success">Created and ready for the next pass.</div>}
+      <Link className="back-link" href={backRoute}><ArrowLeft size={16} /> Back to {kind === "napkin" ? "the pile" : config.plural.toLowerCase()}</Link>
+      {saved && <div className="notice notice--success">{saved === "filed" ? "Approved, published, and filed from its original Napkin." : "Created and ready for the next pass."}</div>}
       <section className="detail-hero">
         <div><p className="eyebrow">{getRecordMeta(kind, record)}</p><h1>{title}</h1><p>Updated {formatDate(record.updated_at)}</p></div>
         <div className="detail-hero__actions"><StatusPill status={String(record.status)} />{mayArchive && <ArchiveButton kind={kind} id={id} />}{record.status === "archived" && canDeleteContent(profile.role) && <DeleteButton kind={kind} id={id} label={title} />}</div>
       </section>
 
       {tags.length > 0 && <div className="tag-list" aria-label="Tags"><Tags size={15} />{tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+
+      {filingDestination && <div className="notice notice--success">Filed as <Link href={filingDestination.href}>{filingDestination.config.singular}: open the published record</Link>.</div>}
+
+      {canFileNapkin && <FileNapkinControl id={id} suggestedTitle={title} hasSourceUrl={Boolean(stringify(record.source_url))} />}
 
       <div className="detail-columns">
         <section className="panel detail-panel">

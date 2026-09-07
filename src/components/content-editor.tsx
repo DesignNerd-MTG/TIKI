@@ -5,8 +5,8 @@ import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Archive, Save } from "lucide-react";
 
-import { archiveContentAction, deleteContentAction, saveContentAction, type ContentActionState } from "@/app/(portal)/content-actions";
-import { contentConfigs, getStatusLabel } from "@/lib/content";
+import { archiveContentAction, deleteContentAction, fileNapkinAction, saveContentAction, type ContentActionState } from "@/app/(portal)/content-actions";
+import { contentConfigs, filingDestinationKinds, getStatusLabel } from "@/lib/content";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
 
 function SubmitButton({ create }: { create: boolean }) {
@@ -14,19 +14,27 @@ function SubmitButton({ create }: { create: boolean }) {
   return <button className="primary-button" type="submit" disabled={pending}>{pending ? "Saving…" : <><Save size={16} /> {create ? "Create" : "Save changes"}</>}</button>;
 }
 
+function FileButton() {
+  const { pending } = useFormStatus();
+  return <button className="primary-button" type="submit" disabled={pending}>{pending ? "Filing…" : "Approve & File"}</button>;
+}
+
 export function ContentEditor({
   kind,
   record,
   tags = [],
   statuses,
+  defaultStatus,
 }: {
   kind: EntityKind;
   record?: ManagedRecord | null;
   tags?: string[];
   statuses: string[];
+  defaultStatus?: string;
 }) {
   const config = contentConfigs[kind];
   const showStatusControl = kind !== "napkin" || Boolean(record && statuses.length > 1);
+  const displayStatuses = kind === "napkin" && record?.status !== "converted" ? statuses.filter((status) => status !== "converted") : statuses;
   const router = useRouter();
   const [state, action] = useActionState(saveContentAction, { ok: false, message: "" } satisfies ContentActionState);
   useEffect(() => {
@@ -65,21 +73,14 @@ export function ContentEditor({
         {showStatusControl ? (
           <label className="form-field">
             <span>{kind === "napkin" ? "Workflow" : "Status"}</span>
-            <select name="status" defaultValue={String(record?.status ?? statuses[0])} aria-invalid={Boolean(state.fieldErrors?.status)}>
-              {statuses.map((status) => <option value={status} key={status}>{getStatusLabel(status)}</option>)}
+            <select name="status" defaultValue={String(record?.status ?? defaultStatus ?? displayStatuses[0])} aria-invalid={Boolean(state.fieldErrors?.status)}>
+              {displayStatuses.map((status) => <option value={status} key={status}>{getStatusLabel(status)}</option>)}
             </select>
-            {kind === "napkin" && <small>Stored → Under review → Filed → Archived</small>}
+            {kind === "napkin" && <small>{record?.status === "converted" ? "This Napkin is linked to its filed record." : "Use Approve & File below to create the destination record."}</small>}
             {state.fieldErrors?.status && <small className="field-error">{state.fieldErrors.status}</small>}
           </label>
         ) : (
           <input type="hidden" name="status" value={String(record?.status ?? "raw")} />
-        )}
-
-        {kind === "napkin" && record && statuses.length > 1 && (
-          <>
-            <label className="form-field"><span>Filed under</span><select name="converted_to_kind" defaultValue={String(record?.converted_to_kind ?? "")} aria-invalid={Boolean(state.fieldErrors?.converted_to_kind)}><option value="">Choose a destination</option>{Object.values(contentConfigs).filter((item) => item.kind !== "napkin").map((item) => <option value={item.kind} key={item.kind}>{item.singular}</option>)}</select>{state.fieldErrors?.converted_to_kind && <small className="field-error">{state.fieldErrors.converted_to_kind}</small>}</label>
-            <label className="form-field"><span>Filed record ID</span><input name="converted_to_id" defaultValue={String(record?.converted_to_id ?? "")} placeholder="UUID of the organized record" aria-invalid={Boolean(state.fieldErrors?.converted_to_id)} />{state.fieldErrors?.converted_to_id && <small className="field-error">{state.fieldErrors.converted_to_id}</small>}</label>
-          </>
         )}
 
         <label className="form-field form-field--wide">
@@ -97,6 +98,31 @@ export function ContentEditor({
       </div>
       <div className="content-form__actions"><SubmitButton create={!record} /></div>
     </form>
+  );
+}
+
+export function FileNapkinControl({ id, suggestedTitle, hasSourceUrl }: { id: string; suggestedTitle: string; hasSourceUrl: boolean }) {
+  const router = useRouter();
+  const [state, action] = useActionState(fileNapkinAction, { ok: false, message: "" } satisfies ContentActionState);
+  useEffect(() => {
+    if (state.ok && state.redirectTo) router.push(state.redirectTo);
+  }, [router, state]);
+
+  return (
+    <section className="panel editor-panel napkin-file-panel">
+      <div className="panel__heading"><div><p className="eyebrow">Editorial approval</p><h2>Approve and file this Napkin</h2></div></div>
+      <p className="form-intro">This creates a published record in the selected section, copies the Napkin’s tags and source, and marks the original as Filed.</p>
+      <form action={action} className="content-form">
+        <input type="hidden" name="id" value={id} />
+        {state.message && <div className={`notice ${state.ok ? "notice--success" : "notice--error"}`} role="status">{state.message}</div>}
+        <div className="content-form__grid">
+          <label className="form-field"><span>File into</span><select name="target_kind" defaultValue="" aria-invalid={Boolean(state.fieldErrors?.target_kind)}><option value="">Choose a section</option>{filingDestinationKinds.map((kind) => <option value={kind} key={kind}>{contentConfigs[kind].plural}</option>)}</select>{state.fieldErrors?.target_kind && <small className="field-error">{state.fieldErrors.target_kind}</small>}</label>
+          <label className="form-field"><span>Record title</span><input name="record_title" defaultValue={suggestedTitle} maxLength={160} aria-invalid={Boolean(state.fieldErrors?.record_title)} />{state.fieldErrors?.record_title && <small className="field-error">{state.fieldErrors.record_title}</small>}</label>
+          <label className="form-field form-field--wide"><span>Approval note</span><textarea name="review_note" rows={2} maxLength={500} placeholder="Why this belongs in the knowledge base" aria-invalid={Boolean(state.fieldErrors?.review_note)} /><small>{hasSourceUrl ? "The source link will be copied to the filed record." : "Links and Documents require a Source URL before filing."}</small>{state.fieldErrors?.review_note && <small className="field-error">{state.fieldErrors.review_note}</small>}</label>
+        </div>
+        <div className="content-form__actions"><FileButton /></div>
+      </form>
+    </section>
   );
 }
 

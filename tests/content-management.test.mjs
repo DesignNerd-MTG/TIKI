@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
-import { contentConfigs, getRecordDetail, getRecordMeta, getRecordTitle, getStatusLabel } from "../src/lib/content.ts";
+import { contentConfigs, filingDestinationKinds, getRecordDetail, getRecordMeta, getRecordTitle, getStatusLabel } from "../src/lib/content.ts";
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent, canSetStatus } from "../src/lib/content-rules.ts";
 import { buildSearchPattern, isSafeExternalUrl, isUuid, normalizeTags, slugifyTag, validateContentInput } from "../src/lib/content-validation.ts";
 import { defaultTheme, isThemePreset, resolveTheme, themePresets } from "../src/lib/theme.ts";
@@ -56,6 +56,8 @@ describe("content status workflow", () => {
     assert.equal(getStatusLabel("raw"), "Stored");
     assert.equal(getStatusLabel("needs_review"), "Under review");
     assert.equal(getStatusLabel("converted"), "Filed");
+    assert.equal(getStatusLabel("submitted"), "Awaiting approval");
+    assert.equal(getStatusLabel("verified"), "Approved");
   });
 });
 
@@ -143,6 +145,7 @@ describe("tags, search, and record presentation", () => {
     assert.equal(getRecordMeta("show", { job_number: "LDG-260907", client_name: "ESPN", location: "Bristol" }), "Job LDG-260907 · ESPN · Bristol");
     assert.equal(getRecordMeta("location", { kind: "studio", city: "New York", region: "NY" }), "studio · New York · NY");
     assert.equal(getRecordMeta("drink", { glassware: "Double rocks", garnish: "Mint" }), "Double rocks · Mint");
+    assert.deepEqual(filingDestinationKinds, ["fixture", "show", "link", "document", "location", "drink"]);
   });
 
   it("validates useful locations and cocktail recipes as canonical knowledge", () => {
@@ -227,9 +230,23 @@ describe("Supabase RLS migration", () => {
     assert.match(sql, /set status = 'needs_review', assigned_to = null/i);
     assert.match(sql, /status <> 'archived' or public\.has_minimum_role\('editor'\)/i);
     assert.doesNotMatch(editor, /Assigned to/);
-    assert.match(editor, /Stored → Under review → Filed → Archived/);
+    assert.match(editor, /Approve & File/);
     assert.match(navigation, /Pile of Napkins/);
     assert.match(navigation, /Napkin Queue/);
+  });
+
+  it("files approved Napkins into published destination records atomically", async () => {
+    const sql = await readFile(new URL("../supabase/migrations/202609070006_file_napkins.sql", import.meta.url), "utf8");
+    const action = await readFile(new URL("../src/app/(portal)/content-actions.ts", import.meta.url), "utf8");
+    assert.match(sql, /create or replace function public\.file_napkin/i);
+    assert.match(sql, /if not public\.has_minimum_role\('editor'\)/i);
+    assert.match(sql, /when 'drink'[\s\S]*insert into public\.drinks/i);
+    assert.match(sql, /when 'location'[\s\S]*insert into public\.locations/i);
+    assert.match(sql, /set status = 'converted', converted_to_kind = target_kind, converted_to_id = new_id/i);
+    assert.match(sql, /select ct\.tag_id, target_kind, new_id/i);
+    assert.match(sql, /status, created_by, verified_by[\s\S]*'published'/i);
+    assert.match(action, /supabase\.rpc\("file_napkin"/);
+    assert.doesNotMatch(sql, /service_role|sb_secret_/i);
   });
 });
 

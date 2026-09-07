@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { contentConfigs } from "@/lib/content";
+import { contentConfigs, filingDestinationKinds, type FilingDestinationKind } from "@/lib/content";
 import { canArchiveContent, canCreateContent, canDeleteContent, canEditContent } from "@/lib/content-rules";
 import { isUuid, validateContentInput, type ContentInput } from "@/lib/content-validation";
 import { getIdentityAndProfile } from "@/lib/auth";
@@ -19,6 +19,10 @@ export type ContentActionState = {
 
 function isEntityKind(value: string): value is EntityKind {
   return value in contentConfigs;
+}
+
+function isFilingDestination(value: string): value is FilingDestinationKind {
+  return filingDestinationKinds.includes(value as FilingDestinationKind);
 }
 
 function readInput(formData: FormData, kind: EntityKind): ContentInput {
@@ -66,14 +70,8 @@ export async function saveContentAction(_previous: ContentActionState, formData:
 
   const payload: Record<string, unknown> = { ...validation.payload };
   if (!existing) payload.created_by = identity.id;
-  if (kind === "napkin" && profile.role !== "viewer" && profile.role !== "contributor") {
-    const convertedKind = String(formData.get("converted_to_kind") ?? "").trim();
-    const convertedId = String(formData.get("converted_to_id") ?? "").trim();
-    if (convertedKind && (!isEntityKind(convertedKind) || convertedKind === "napkin")) return { ok: false, message: "Check the highlighted fields and try again.", fieldErrors: { converted_to_kind: "Choose a valid destination type." } };
-    if (convertedId && !isUuid(convertedId)) return { ok: false, message: "Check the highlighted fields and try again.", fieldErrors: { converted_to_id: "Enter a valid record UUID." } };
-    if (String(payload.status) === "converted" && (!convertedKind || !convertedId)) return { ok: false, message: "Filed Napkins must identify their organized record.", fieldErrors: { converted_to_id: "Choose a destination type and enter its record UUID." } };
-    payload.converted_to_kind = convertedKind || null;
-    payload.converted_to_id = convertedId || null;
+  if (kind === "napkin" && String(payload.status) === "converted" && existing?.status !== "converted") {
+    return { ok: false, message: "Use Approve & File so T.I.K.I. can create and link the destination record." };
   }
   if (["fixture", "show", "link", "document", "location", "drink"].includes(kind) && ["verified", "published"].includes(String(payload.status))) {
     payload.verified_by = identity.id;
@@ -112,6 +110,56 @@ export async function saveContentAction(_previous: ContentActionState, formData:
     message: warnings.length ? `Content saved, but some metadata needs another try (${warnings.join("; ")}).` : `${config.singular} saved.`,
     redirectTo: existing ? undefined : `${config.route}/${recordId}?saved=created`,
   };
+}
+
+export async function fileNapkinAction(_previous: ContentActionState, formData: FormData): Promise<ContentActionState> {
+  const id = String(formData.get("id") ?? "").trim();
+  const targetKindValue = String(formData.get("target_kind") ?? "").trim();
+  const recordTitle = String(formData.get("record_title") ?? "").trim();
+  const reviewNote = String(formData.get("review_note") ?? "").trim();
+  const fieldErrors: Record<string, string> = {};
+
+  if (!isUuid(id)) return { ok: false, message: "That Napkin could not be identified." };
+  if (!isFilingDestination(targetKindValue)) fieldErrors.target_kind = "Choose where this knowledge belongs.";
+  if (!recordTitle) fieldErrors.record_title = "Give the filed record a useful title.";
+  else if (recordTitle.length > 160) fieldErrors.record_title = "Keep the title to 160 characters or fewer.";
+  if (reviewNote.length > 500) fieldErrors.review_note = "Keep the approval note to 500 characters or fewer.";
+  if (Object.keys(fieldErrors).length) return { ok: false, message: "Check the highlighted fields and try again.", fieldErrors };
+
+  const { identity, profile } = await getIdentityAndProfile();
+  if (!identity || !profile?.active) return { ok: false, message: "Your session is no longer active. Sign in again." };
+  if (profile.role !== "editor" && profile.role !== "admin") return { ok: false, message: "Only Editors and Admins can approve and file Napkins." };
+
+  const targetKind = targetKindValue as FilingDestinationKind;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("file_napkin", {
+    note_id: id,
+    target_kind: targetKind,
+    record_title: recordTitle,
+    review_note: reviewNote || null,
+  });
+  const row = Array.isArray(data) ? data[0] : data;
+  const recordId = row && typeof row === "object" && "entity_id" in row ? String(row.entity_id) : "";
+
+  if (error || !isUuid(recordId)) {
+    const detail = error?.message ?? "Try again.";
+    const friendly = detail.includes("Source URL")
+      ? detail
+      : detail.includes("already filed")
+        ? "This Napkin has already been filed. Refresh the page to see its destination."
+        : `T.I.K.I. could not file this Napkin. ${detail}`;
+    return { ok: false, message: friendly };
+  }
+
+  const destination = contentConfigs[targetKind];
+  revalidatePath("/napkin/pile");
+  revalidatePath("/napkin/queue");
+  revalidatePath(`/napkin/${id}`);
+  revalidatePath(destination.route);
+  revalidatePath(`${destination.route}/${recordId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/search");
+  return { ok: true, message: `Approved and filed under ${destination.plural}.`, redirectTo: `${destination.route}/${recordId}?saved=filed` };
 }
 
 export async function archiveContentAction(_previous: ContentActionState, formData: FormData): Promise<ContentActionState> {
