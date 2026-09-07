@@ -71,6 +71,18 @@ describe("portal appearance presets", () => {
     assert.match(css, /\[data-theme="night"\][^}]*--text-muted: #ffffff/);
   });
 
+  it("keeps the Napkin card and capture form inside the active theme", async () => {
+    const css = await readFile(new URL("../src/app/globals.css", import.meta.url), "utf8");
+    const card = css.match(/\.napkin-card\s*{([^}]*)}/)?.[1] ?? "";
+    const capture = css.match(/\.napkin-capture\s*{([^}]*)}/)?.[1] ?? "";
+    const fields = css.match(/\.napkin-form textarea,\s*\.napkin-form input\[type="url"\]\s*{([^}]*)}/)?.[1] ?? "";
+
+    assert.match(card, /var\(--surface-raised\)/);
+    assert.match(capture, /var\(--surface-raised\)/);
+    assert.match(fields, /background: var\(--control-fill\)/);
+    assert.doesNotMatch(`${card}${capture}${fields}`, /#fffaf0|rgba\(242, 230, 191/);
+  });
+
   it("protects the global setting with authenticated read and admin update RLS", async () => {
     const migration = await readFile(
       new URL("../supabase/migrations/202609070002_site_appearance.sql", import.meta.url),
