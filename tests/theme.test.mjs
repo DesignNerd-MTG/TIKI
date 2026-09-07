@@ -48,6 +48,10 @@ describe("portal appearance presets", () => {
         contrastRatio(preset.control, preset.text) >= 4.5,
         `${preset.label} must meet WCAG AA field contrast`,
       );
+      assert.ok(
+        contrastRatio(preset.sidebar, preset.sidebarText) >= 4.5,
+        `${preset.label} must meet WCAG AA sidebar contrast`,
+      );
       for (const swatch of preset.swatches) {
         assert.ok(
           luminance(swatch) < 0.62,
@@ -69,6 +73,10 @@ describe("portal appearance presets", () => {
     assert.match(css, /\.workspace[\s\S]*radial-gradient[\s\S]*var\(--ambient-cool\)/);
     assert.match(css, /\[data-theme="night"\][^}]*--text-secondary: #ffffff/);
     assert.match(css, /\[data-theme="night"\][^}]*--text-muted: #ffffff/);
+    assert.match(css, /\[data-theme="night"\][^}]*--sidebar-bg: #171021/);
+    assert.match(css, /\.nav-link--active\s*{[^}]*background: var\(--sidebar-active\)/);
+    assert.match(css, /\.nav-link--active::before\s*{[^}]*background: var\(--sidebar-accent\)/);
+    assert.match(css, /\.brand__water\s*{[^}]*background: var\(--sidebar-accent\)/);
   });
 
   it("keeps the Napkin card and capture form inside the active theme", async () => {

@@ -5,6 +5,8 @@ export const themePresets = [
     description: "Dark teak, burnt orange, and poolside turquoise.",
     swatches: ["#2b211b", "#5a4030", "#f06b3d", "#43b8c4"],
     control: "#211915",
+    sidebar: "#172b31",
+    sidebarText: "#fff1d6",
     text: "#fff1d6",
   },
   {
@@ -13,6 +15,8 @@ export const themePresets = [
     description: "Powder-blue motel tones, turquoise, and sharp chartreuse.",
     swatches: ["#1e2a3b", "#3d5870", "#45b9d1", "#aac744"],
     control: "#182333",
+    sidebar: "#152235",
+    sidebarText: "#f5f4e8",
     text: "#f5f4e8",
   },
   {
@@ -21,6 +25,8 @@ export const themePresets = [
     description: "Palm Springs orange, mustard, coral, and tobacco brown.",
     swatches: ["#3a1d18", "#743625", "#f04b2e", "#e9b52e"],
     control: "#2d1714",
+    sidebar: "#2a1513",
+    sidebarText: "#fff0d2",
     text: "#fff0d2",
   },
   {
@@ -29,6 +35,8 @@ export const themePresets = [
     description: "Avocado, olive, aqua, and a flash of tropical orange.",
     swatches: ["#1c2b17", "#46602b", "#94bd3e", "#59b7c5"],
     control: "#162211",
+    sidebar: "#142313",
+    sidebarText: "#f5efcf",
     text: "#f5efcf",
   },
   {
@@ -37,6 +45,8 @@ export const themePresets = [
     description: "A plum cocktail lounge with lavender, aqua, and acid green.",
     swatches: ["#21172e", "#48305e", "#68c7d4", "#afc93d"],
     control: "#191121",
+    sidebar: "#171021",
+    sidebarText: "#ffffff",
     text: "#ffffff",
   },
 ] as const;

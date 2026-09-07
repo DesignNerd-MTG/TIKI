@@ -24,7 +24,7 @@ export function AppearanceSettings({ currentTheme }: { currentTheme: ThemePreset
           <h2 id="appearance-heading"><Palette size={19} /> Appearance</h2>
         </div>
       </div>
-      <p className="appearance-panel__intro">Choose a curated, contrast-tested atmosphere for every active T.I.K.I. user. The dark navigation stays familiar.</p>
+      <p className="appearance-panel__intro">Choose a curated, contrast-tested atmosphere for every active T.I.K.I. user. The canvas, navigation, controls, and accents change together.</p>
       {state.message && <div className={`notice ${state.ok ? "notice--success" : "notice--error"}`} role="status">{state.ok && <Check size={17} />}{state.message}</div>}
       <form action={action}>
         <div className="theme-options" role="radiogroup" aria-label="T.I.K.I. theme">
