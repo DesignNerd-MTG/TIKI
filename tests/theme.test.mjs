@@ -90,9 +90,34 @@ describe("portal appearance presets", () => {
     const fields = css.match(/\.napkin-form textarea,\s*\.napkin-form input\[type="url"\]\s*{([^}]*)}/)?.[1] ?? "";
 
     assert.match(card, /var\(--surface-raised\)/);
+    assert.match(card, /var\(--napkin-accent-soft\)/);
     assert.match(capture, /var\(--surface-raised\)/);
+    assert.match(capture, /var\(--napkin-line\)/);
     assert.match(fields, /background: var\(--control-fill\)/);
     assert.doesNotMatch(`${card}${capture}${fields}`, /#fffaf0|rgba\(242, 230, 191/);
+  });
+
+  it("keeps legacy light literals out of authenticated portal components", async () => {
+    const css = await readFile(new URL("../src/app/globals.css", import.meta.url), "utf8");
+    const portalCss = css.split("/* Portal shell */")[1] ?? "";
+
+    assert.doesNotMatch(portalCss, /#fff9e9|#cfd8da|#cfe3df|#b8dcd7|#d6e9e5|#dcebe8/i);
+    assert.doesNotMatch(portalCss, /#[0-9a-f]{3,8}|rgba?\(/i);
+    assert.match(portalCss, /\.restricted-badge[\s\S]*var\(--warning-surface\)/);
+    assert.match(portalCss, /\.answer-card[\s\S]*var\(--border\)/);
+  });
+
+  it("gives every palette its own dashboard hero treatment", async () => {
+    const css = await readFile(new URL("../src/app/globals.css", import.meta.url), "utf8");
+    const heroGradients = themePresets.map((preset) => {
+      const block = css.match(new RegExp(`\\[data-theme="${preset.id}"\\]\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+      assert.match(block, /--hero-gradient-start:/, `${preset.label} needs a hero start color`);
+      assert.match(block, /--hero-gradient-end:/, `${preset.label} needs a hero end color`);
+      assert.match(block, /--hero-glow:/, `${preset.label} needs a hero glow`);
+      return block.match(/--hero-gradient-end:\s*([^;]+)/)?.[1];
+    });
+
+    assert.equal(new Set(heroGradients).size, themePresets.length);
   });
 
   it("protects the global setting with authenticated read and admin update RLS", async () => {
