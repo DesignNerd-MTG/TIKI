@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, LockKeyhole, ScanSearch } from "lucide-react"
 import { Brand } from "@/components/brand";
 import { EmailAuthForm } from "@/components/email-auth-form";
 import { getIdentityAndProfile } from "@/lib/auth";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseConfigStatus } from "@/lib/supabase/config";
 
 export const metadata: Metadata = { title: "Sign in" };
 export const dynamic = "force-dynamic";
@@ -15,7 +15,8 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string; setup?: string }>;
 }) {
-  const configured = isSupabaseConfigured();
+  const configStatus = getSupabaseConfigStatus();
+  const configured = configStatus.configured;
   const { identity, profile } = configured
     ? await getIdentityAndProfile()
     : { identity: null, profile: null };
@@ -78,16 +79,16 @@ export default async function LoginPage({
               That email link could not be completed. It may have expired; please try again.
             </div>
           )}
-          {!configured && (
+          {!configStatus.configured && (
             <div className="setup-card">
               <strong>Setup mode</strong>
-              <span>Add your Supabase project values to enable email sign-in.</span>
+              <span>{configStatus.message}</span>
             </div>
           )}
 
           <EmailAuthForm configured={configured} />
 
-          {!configured && (
+          {!configStatus.configured && (
             <Link className="preview-link" href="/preview">
               Preview the portal first <ArrowRight size={16} />
             </Link>

@@ -15,6 +15,7 @@ import {
   emailAuthAction,
   type EmailAuthActionState,
 } from "@/app/login/actions";
+import { getEmailAuthErrorMessage } from "@/lib/auth-errors";
 
 type AuthMode = "sign-in" | "sign-up" | "reset";
 
@@ -61,15 +62,16 @@ export function EmailAuthForm({ configured }: { configured: boolean }) {
       const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
       });
-      if (error) throw error;
+      if (error) {
+        setErrorMessage(getEmailAuthErrorMessage(error, "reset"));
+        return;
+      }
 
       setMessage(
         "If an account exists for that address, Supabase will send a password-reset link.",
       );
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "The password reset could not start.",
-      );
+      setErrorMessage(getEmailAuthErrorMessage(error, "reset"));
     } finally {
       setResetLoading(false);
     }

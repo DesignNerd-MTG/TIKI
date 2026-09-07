@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getEmailAuthErrorMessage } from "@/lib/auth-errors";
 import { getPortalEntryRoute } from "@/lib/auth-routing";
 import { createClient } from "@/lib/supabase/server";
 import type { AppRole } from "@/lib/types";
@@ -43,7 +44,12 @@ export async function emailAuthAction(
     return { mode, error: "Use a password with at least 8 characters." };
   }
 
-  const supabase = await createClient();
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch (error) {
+    return { mode, error: getEmailAuthErrorMessage(error, mode) };
+  }
 
   if (mode === "sign-up") {
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
@@ -53,14 +59,29 @@ export async function emailAuthAction(
 
     const requestHeaders = await headers();
     const emailRedirectTo = confirmationRedirect(requestHeaders.get("origin"));
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: emailRedirectTo ? { emailRedirectTo } : undefined,
-    });
+    let result;
+    try {
+      result = await supabase.auth.signUp({
+        email,
+        password,
+        options: emailRedirectTo ? { emailRedirectTo } : undefined,
+      });
+    } catch (error) {
+      return { mode, error: getEmailAuthErrorMessage(error, mode) };
+    }
+
+    const { data, error } = result;
 
     if (error) {
-      return { mode, error: error.message };
+      return { mode, error: getEmailAuthErrorMessage(error, mode) };
+    }
+
+    if (data.user && data.user.identities?.length === 0) {
+      return {
+        mode,
+        error:
+          "An account already exists for this email. Choose Sign in or use Forgot password.",
+      };
     }
 
     if (data.session) {
@@ -75,13 +96,21 @@ export async function emailAuthAction(
     };
   }
 
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  let signInResult;
+  try {
+    signInResult = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+  } catch (error) {
+    return { mode, error: getEmailAuthErrorMessage(error, mode) };
+  }
 
-  if (signInError) {
-    return { mode, error: "The email or password was not accepted." };
+  if (signInResult.error) {
+    return {
+      mode,
+      error: getEmailAuthErrorMessage(signInResult.error, mode),
+    };
   }
 
   // Verify the cookie-backed identity before deciding where the account belongs.
@@ -89,8 +118,15 @@ export async function emailAuthAction(
   const userId = claimsData?.claims?.sub;
 
   if (claimsError || !userId) {
+    if (claimsError?.name === "AuthRetryableFetchError") {
+      return { mode, error: getEmailAuthErrorMessage(claimsError, mode) };
+    }
+
     await supabase.auth.signOut();
-    return { mode, error: "The session could not be verified. Please sign in again." };
+    return {
+      mode,
+      error: "The session could not be verified. Please sign in again.",
+    };
   }
 
   const { data: profile } = await supabase
