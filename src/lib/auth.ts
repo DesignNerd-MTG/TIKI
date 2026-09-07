@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { canAccess } from "@/lib/access";
+import { getPortalEntryRoute } from "@/lib/auth-routing";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import type { AccessContext, AppRole, Identity, Profile } from "@/lib/types";
@@ -55,9 +56,10 @@ export async function requireActiveProfile(
   minimumRole: AppRole = "viewer",
 ): Promise<AccessContext> {
   const { identity, profile } = await getIdentityAndProfile();
+  const entryRoute = getPortalEntryRoute(Boolean(identity), profile);
 
-  if (!identity) redirect("/login");
-  if (!profile?.active) redirect("/pending");
+  if (entryRoute !== "/dashboard") redirect(entryRoute);
+  if (!identity || !profile) redirect("/login");
   if (!canAccess(profile, minimumRole)) redirect("/dashboard?notice=restricted");
 
   return { identity, profile };

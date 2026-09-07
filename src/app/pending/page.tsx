@@ -5,14 +5,16 @@ import { redirect } from "next/navigation";
 
 import { Brand } from "@/components/brand";
 import { getIdentityAndProfile } from "@/lib/auth";
+import { getPortalEntryRoute } from "@/lib/auth-routing";
 
 export const metadata: Metadata = { title: "Access pending" };
 export const dynamic = "force-dynamic";
 
 export default async function PendingPage() {
   const { identity, profile } = await getIdentityAndProfile();
+  const entryRoute = getPortalEntryRoute(Boolean(identity), profile);
+  if (entryRoute !== "/pending") redirect(entryRoute);
   if (!identity) redirect("/login");
-  if (profile?.active) redirect("/dashboard");
 
   return (
     <main className="pending-page">

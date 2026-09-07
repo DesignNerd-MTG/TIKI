@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useActionState, useState } from "react";
 import {
   ArrowLeft,
   KeyRound,
@@ -12,6 +11,10 @@ import {
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import {
+  emailAuthAction,
+  type EmailAuthActionState,
+} from "@/app/login/actions";
 
 type AuthMode = "sign-in" | "sign-up" | "reset";
 
@@ -21,15 +24,20 @@ const modeCopy: Record<AuthMode, { title: string; action: string }> = {
   reset: { title: "Reset password", action: "Send reset link" },
 };
 
+const initialAuthState: EmailAuthActionState = {};
+
 export function EmailAuthForm({ configured }: { configured: boolean }) {
-  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [authState, formAction, authPending] = useActionState(
+    emailAuthAction,
+    initialAuthState,
+  );
 
   function changeMode(nextMode: AuthMode) {
     setMode(nextMode);
@@ -39,72 +47,38 @@ export function EmailAuthForm({ configured }: { configured: boolean }) {
     setErrorMessage(null);
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submitReset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!configured || loading) return;
+    if (!configured || resetLoading) return;
 
-    setLoading(true);
+    setResetLoading(true);
     setMessage(null);
     setErrorMessage(null);
 
     try {
       const supabase = createClient();
       const normalizedEmail = email.trim().toLowerCase();
-
-      if (mode === "reset") {
-        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-        });
-        if (error) throw error;
-
-        setMessage(
-          "If an account exists for that address, Supabase will send a password-reset link.",
-        );
-        return;
-      }
-
-      if (mode === "sign-up") {
-        if (password !== confirmPassword) {
-          throw new Error("The two passwords do not match.");
-        }
-
-        const { data, error } = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=/pending`,
-          },
-        });
-        if (error) throw error;
-
-        if (data.session) {
-          router.replace("/pending");
-          router.refresh();
-          return;
-        }
-
-        setMessage(
-          "Account created. Check your email to confirm the address, then sign in. An administrator must still activate T.I.K.I. access.",
-        );
-        return;
-      }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password,
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
       });
       if (error) throw error;
 
-      router.replace("/dashboard");
-      router.refresh();
+      setMessage(
+        "If an account exists for that address, Supabase will send a password-reset link.",
+      );
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : `${modeCopy[mode].title} could not complete.`,
+        error instanceof Error ? error.message : "The password reset could not start.",
       );
     } finally {
-      setLoading(false);
+      setResetLoading(false);
     }
   }
+
+  const loading = resetLoading || authPending;
+  const actionState = authState.mode === mode ? authState : initialAuthState;
+  const visibleMessage = message ?? actionState.message;
+  const visibleError = errorMessage ?? actionState.error;
 
   const submitIcon = loading ? (
     <LoaderCircle className="spin" size={18} aria-hidden="true" />
@@ -147,7 +121,12 @@ export function EmailAuthForm({ configured }: { configured: boolean }) {
         </button>
       )}
 
-      <form className="auth-form" onSubmit={submit}>
+      <form
+        className="auth-form"
+        action={mode === "reset" ? undefined : formAction}
+        onSubmit={mode === "reset" ? submitReset : undefined}
+      >
+        {mode !== "reset" && <input type="hidden" name="mode" value={mode} />}
         {mode === "reset" && (
           <div className="auth-form__heading">
             <span><KeyRound size={18} aria-hidden="true" /></span>
@@ -213,8 +192,8 @@ export function EmailAuthForm({ configured }: { configured: boolean }) {
           </>
         )}
 
-        {message && <div className="notice notice--success" role="status">{message}</div>}
-        {errorMessage && <div className="notice notice--error" role="alert">{errorMessage}</div>}
+        {visibleMessage && <div className="notice notice--success" role="status">{visibleMessage}</div>}
+        {visibleError && <div className="notice notice--error" role="alert">{visibleError}</div>}
 
         <button className="primary-button auth-submit" type="submit" disabled={!configured || loading}>
           {submitIcon}
