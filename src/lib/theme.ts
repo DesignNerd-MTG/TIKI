@@ -2,8 +2,8 @@ export const themePresets = [
   {
     id: "volcanic-sand",
     label: "Volcanic sand",
-    description: "Warm stone, weathered teak, and deep lagoon accents.",
-    swatches: ["#c8baa8", "#e5d9c8", "#087f83", "#211b17"],
+    description: "Dark warm stone, weathered teak, and low-glare lagoon accents.",
+    swatches: ["#1f1b18", "#352e29", "#69cbc7", "#f2e8da"],
   },
   {
     id: "lagoon",

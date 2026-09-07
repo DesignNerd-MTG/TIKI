@@ -35,9 +35,66 @@
   --gold-soft: #f8edce;
   --blue: #496f87;
   --blue-soft: #e6eef2;
+  --danger-border: #efc2b7;
+  --danger-hover: #fee8e2;
+  --danger-text: #9d351f;
+  --warning-border: #ead9a6;
+  --warning-surface: #fff8e5;
+  --warning-text: #6e5316;
+  --error-border: #f0c5b9;
+  --error-surface: #fff1ec;
+  --error-text: #8c3b29;
+  --success-border: #bce1d7;
+  --success-surface: #eaf8f3;
+  --success-text: #176855;
+  --neutral-surface: #eef2f2;
+  --neutral-text: #65747b;
   --shadow-sm: 0 1px 2px rgba(16, 29, 37, 0.05), 0 8px 24px rgba(16, 29, 37, 0.05);
   --shadow-lg: 0 24px 70px rgba(10, 31, 39, 0.16);
   --radius: 18px;
+}
+
+[data-theme="volcanic-sand"] {
+  --canvas: #1f1b18;
+  --surface: #29231f;
+  --surface-raised: #352e29;
+  --surface-muted: #251f1c;
+  --surface-hover: #40362f;
+  --control-fill: #1b1816;
+  --topbar: rgba(41, 35, 31, 0.95);
+  --text-primary: #f2e8da;
+  --text-secondary: #cfc0af;
+  --text-muted: #aa9886;
+  --border: #67584d;
+  --border-soft: #493e36;
+  --accent: #69cbc7;
+  --accent-strong: #247f82;
+  --accent-link: #82d9d5;
+  --accent-soft: #193c3c;
+  --focus-ring: rgba(105, 203, 199, 0.38);
+  --hero-bg: #102a31;
+  --coral: #ff957b;
+  --coral-soft: #3a211d;
+  --gold: #e3b855;
+  --gold-soft: #3a301c;
+  --blue: #a9cce0;
+  --blue-soft: #20333e;
+  --danger-border: #7e493d;
+  --danger-hover: #482720;
+  --danger-text: #ffb6a3;
+  --warning-border: #806b31;
+  --warning-surface: #332b19;
+  --warning-text: #f4d989;
+  --error-border: #7e493d;
+  --error-surface: #351f1b;
+  --error-text: #ffb6a3;
+  --success-border: #3e7166;
+  --success-surface: #18322c;
+  --success-text: #9fe0d0;
+  --neutral-surface: #2d3434;
+  --neutral-text: #b9c5c4;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.26), 0 10px 30px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.34);
 }
 
 [data-theme="lagoon"] {
@@ -122,6 +179,26 @@
   --accent-soft: #254e50;
   --focus-ring: rgba(121, 210, 202, 0.42);
   --hero-bg: #0d1c22;
+  --coral: #ff957b;
+  --coral-soft: #3a211d;
+  --gold: #e3b855;
+  --gold-soft: #3a301c;
+  --blue: #a9cce0;
+  --blue-soft: #20333e;
+  --danger-border: #7e493d;
+  --danger-hover: #482720;
+  --danger-text: #ffb6a3;
+  --warning-border: #806b31;
+  --warning-surface: #332b19;
+  --warning-text: #f4d989;
+  --error-border: #7e493d;
+  --error-surface: #351f1b;
+  --error-text: #ffb6a3;
+  --success-border: #3e7166;
+  --success-surface: #18322c;
+  --success-text: #9fe0d0;
+  --neutral-surface: #2d3c41;
+  --neutral-text: #b9c9cb;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22), 0 10px 28px rgba(0, 0, 0, 0.18);
   --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.32);
 }
@@ -334,14 +411,14 @@ select:focus-visible {
 }
 
 .danger-button {
-  border-color: #efc2b7;
-  background: #fff4f1;
-  color: #9d351f;
+  border-color: var(--danger-border);
+  background: var(--error-surface);
+  color: var(--danger-text);
 }
 
 .danger-button:hover {
-  border-color: #df9d8e;
-  background: #fee8e2;
+  border-color: var(--danger-text);
+  background: var(--danger-hover);
 }
 
 .primary-button:disabled,
@@ -390,21 +467,21 @@ select:focus-visible {
 }
 
 .notice--warning {
-  border-color: #ead9a6;
-  background: #fff8e5;
-  color: #6e5316;
+  border-color: var(--warning-border);
+  background: var(--warning-surface);
+  color: var(--warning-text);
 }
 
 .notice--error {
-  border-color: #f0c5b9;
-  background: #fff1ec;
-  color: #8c3b29;
+  border-color: var(--error-border);
+  background: var(--error-surface);
+  color: var(--error-text);
 }
 
 .notice--success {
-  border-color: #bce1d7;
-  background: #eaf8f3;
-  color: #176855;
+  border-color: var(--success-border);
+  background: var(--success-surface);
+  color: var(--success-text);
 }
 
 .notice--preview {
@@ -1698,8 +1775,8 @@ a.record-row:hover {
   display: inline-flex;
   padding: 5px 8px;
   border-radius: 99px;
-  background: #eef2f2;
-  color: #65747b;
+  background: var(--neutral-surface);
+  color: var(--neutral-text);
   font-size: 8px;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -1716,7 +1793,7 @@ a.record-row:hover {
 .status-pill--draft,
 .status-pill--raw {
   background: var(--gold-soft);
-  color: #825d17;
+  color: var(--warning-text);
 }
 
 .status-pill--submitted,
@@ -1727,8 +1804,8 @@ a.record-row:hover {
 }
 
 .status-pill--archived {
-  background: #eceeee;
-  color: #778185;
+  background: var(--neutral-surface);
+  color: var(--neutral-text);
 }
 
 .empty-state {

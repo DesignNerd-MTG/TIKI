@@ -34,6 +34,7 @@ describe("portal appearance presets", () => {
     assert.equal(resolveTheme(undefined), defaultTheme);
     assert.equal(isThemePreset("night"), true);
     assert.equal(isThemePreset("custom-css"), false);
+    assert.deepEqual(themePresets[0].swatches, ["#1f1b18", "#352e29", "#69cbc7", "#f2e8da"]);
   });
 
   it("keeps text readable on every theme canvas", () => {
