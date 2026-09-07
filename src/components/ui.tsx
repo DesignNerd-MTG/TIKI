@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { ArrowUpRight, DatabaseZap, SearchX } from "lucide-react";
+import { ArrowUpRight, DatabaseZap, SearchX, Tags } from "lucide-react";
 
 import { formatDate } from "@/lib/format";
 import { getStatusLabel } from "@/lib/content";
@@ -68,10 +68,12 @@ export function RecordList({
   records: Array<{
     id: string;
     title: string;
-    meta: string;
+    meta?: string | null;
     detail?: string | null;
+    tags?: string[];
     status?: string;
     href?: string | null;
+    externalUrl?: string | null;
     date?: string | null;
     external?: boolean;
   }>;
@@ -83,20 +85,25 @@ export function RecordList({
           <>
             <div className="record-row__main">
               <div className="record-row__title-line">
-                <h2>{record.title}</h2>
+                <h2>{record.externalUrl ? <a className="record-row__title-link" href={record.externalUrl} target="_blank" rel="noopener noreferrer">{record.title}<ArrowUpRight size={15} aria-hidden="true" /></a> : record.title}</h2>
                 {record.external && <ArrowUpRight size={15} aria-hidden="true" />}
               </div>
-              <p>{record.meta}</p>
+              {record.tags && record.tags.length > 0 && <div className="tag-list record-row__tags" aria-label="Tags"><Tags size={14} />{record.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+              {record.meta && <p>{record.meta}</p>}
               {record.detail && <span className="record-row__detail">{record.detail}</span>}
+              {record.externalUrl && <a className="record-row__url" href={record.externalUrl} target="_blank" rel="noopener noreferrer">{record.externalUrl}<ArrowUpRight size={14} aria-hidden="true" /></a>}
             </div>
             <div className="record-row__aside">
               {record.status && <StatusPill status={record.status} />}
               {record.date && <time dateTime={record.date}>{formatDate(record.date)}</time>}
+              {record.externalUrl && record.href && <Link className="record-row__details-link" href={record.href}>Details</Link>}
             </div>
           </>
         );
 
-        return record.href ? (
+        return record.externalUrl ? (
+          <article className="record-row record-row--link-hub" key={record.id}>{body}</article>
+        ) : record.href ? (
           record.external ? (
             <a className="record-row" href={record.href} target="_blank" rel="noreferrer" key={record.id}>{body}</a>
           ) : (

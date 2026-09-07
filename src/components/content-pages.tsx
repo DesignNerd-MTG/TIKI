@@ -26,6 +26,24 @@ async function getTags(kind: EntityKind, id: string) {
   return (result.data ?? []).map((tag) => tag.name);
 }
 
+async function getTagsForRecords(kind: EntityKind, ids: string[]) {
+  const grouped = new Map<string, string[]>();
+  if (!ids.length) return grouped;
+  const supabase = await createClient();
+  const links = await supabase.from("content_tags").select("entity_id,tag_id").eq("entity_kind", kind).in("entity_id", ids);
+  const tagIds = [...new Set((links.data ?? []).map((item) => item.tag_id))];
+  if (!tagIds.length) return grouped;
+  const tags = await supabase.from("tags").select("id,name").in("id", tagIds);
+  const names = new Map((tags.data ?? []).map((tag) => [tag.id, tag.name]));
+  for (const link of links.data ?? []) {
+    const name = names.get(link.tag_id);
+    if (!name) continue;
+    grouped.set(link.entity_id, [...(grouped.get(link.entity_id) ?? []), name]);
+  }
+  for (const values of grouped.values()) values.sort((a, b) => a.localeCompare(b));
+  return grouped;
+}
+
 export async function ContentIndexPage({
   kind,
   searchParams,
@@ -39,7 +57,7 @@ export async function ContentIndexPage({
   createRoute,
 }: {
   kind: EntityKind;
-  searchParams?: Promise<{ view?: string; deleted?: string }>;
+  searchParams?: Promise<{ view?: string; deleted?: string; sort?: string }>;
   icon?: LucideIcon;
   inlineCreate?: boolean;
   title?: string;
@@ -53,28 +71,40 @@ export async function ContentIndexPage({
   const browseRoute = listRoute ?? config.route;
   const [{ profile }, params, supabase] = await Promise.all([
     requireActiveProfile(config.restricted ? "editor" : "viewer"),
-    searchParams ?? Promise.resolve<{ view?: string; deleted?: string }>({}),
+    searchParams ?? Promise.resolve<{ view?: string; deleted?: string; sort?: string }>({}),
     createClient(),
   ]);
   const showArchived = params.view === "archived" && (profile.role === "editor" || profile.role === "admin");
-  let query = supabase.from(config.table).select("*").order("updated_at", { ascending: false });
+  const sort = params.sort === "alpha" ? "alpha" : "date";
+  let query = supabase.from(config.table).select("*");
+  query = sort === "alpha"
+    ? query.order(config.titleField, { ascending: true }).order("updated_at", { ascending: false })
+    : query.order("updated_at", { ascending: false });
   query = showArchived ? query.eq("status", "archived") : query.neq("status", "archived");
   const { data, error } = await query.limit(100);
+  const tagMap = kind === "link" ? await getTagsForRecords(kind, (data ?? []).map((record) => String(record.id))) : new Map<string, string[]>();
   const records = ((data ?? []) as ManagedRecord[]).map((record) => ({
     id: record.id,
     title: getRecordTitle(kind, record),
-    meta: getRecordMeta(kind, record),
+    meta: kind === "link" ? null : getRecordMeta(kind, record),
     detail: getRecordDetail(kind, record),
+    tags: kind === "link" ? tagMap.get(record.id) ?? [] : undefined,
     status: String(record.status),
     date: record.updated_at,
     href: `${config.route}/${record.id}`,
+    externalUrl: kind === "link" ? stringify(record.url) : null,
   }));
   const mayCreate = canCreateContent(profile.role, kind);
   const mayReviewArchive = profile.role === "editor" || profile.role === "admin";
 
   const actions = (
     <div className="page-actions">
-      {mayReviewArchive && <Link className="secondary-button" href={showArchived ? browseRoute : `${browseRoute}?view=archived`}>{showArchived ? "Current records" : "Archived"}</Link>}
+      <div className="sort-control" aria-label="Sort records">
+        <span>Sort</span>
+        <Link className={sort === "date" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=date`}>Recently updated</Link>
+        <Link className={sort === "alpha" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=alpha`}>A–Z</Link>
+      </div>
+      {mayReviewArchive && <Link className="secondary-button" href={showArchived ? `${browseRoute}?sort=${sort}` : `${browseRoute}?view=archived&sort=${sort}`}>{showArchived ? "Current records" : "Archived"}</Link>}
       {mayCreate && !inlineCreate && <Link className="primary-button" href={createRoute ?? `${config.route}/new`}><Plus size={16} /> {createLabel ?? `Add ${config.singular.toLowerCase()}`}</Link>}
       {config.restricted && <span className="restricted-badge"><LockKeyhole size={15} /> Editor access</span>}
     </div>
@@ -187,7 +217,7 @@ export async function ContentDetailPage({
       {mayEdit ? (
         <section className="panel editor-panel">
           <div className="panel__heading"><div><p className="eyebrow">Role-aware controls</p><h2>Edit {config.singular.toLowerCase()}</h2></div></div>
-          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} />
+          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} adminCanPublishWithoutRevision={profile.role === "admin"} />
         </section>
       ) : (
         <div className="notice notice--neutral">This record is read-only for your current role.</div>

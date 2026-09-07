@@ -25,12 +25,14 @@ export function ContentEditor({
   tags = [],
   statuses,
   defaultStatus,
+  adminCanPublishWithoutRevision = false,
 }: {
   kind: EntityKind;
   record?: ManagedRecord | null;
   tags?: string[];
   statuses: string[];
   defaultStatus?: string;
+  adminCanPublishWithoutRevision?: boolean;
 }) {
   const config = contentConfigs[kind];
   const showStatusControl = kind !== "napkin" || Boolean(record && statuses.length > 1);
@@ -92,7 +94,7 @@ export function ContentEditor({
         <label className="form-field form-field--wide">
           <span>Revision note</span>
           <textarea name="revision_note" rows={2} maxLength={500} placeholder={record ? "What changed, and why?" : "Optional source or context for the first revision"} aria-invalid={Boolean(state.fieldErrors?.revision_note)} />
-          <small>{kind === "napkin" && !record ? "Optional source or context for this stored note." : "Status changes require a revision note."}</small>
+          <small>{kind === "napkin" && !record ? "Optional source or context for this stored note." : adminCanPublishWithoutRevision ? "Optional when publishing as an administrator; other status changes require a note." : "Status changes require a revision note."}</small>
           {state.fieldErrors?.revision_note && <small className="field-error">{state.fieldErrors.revision_note}</small>}
         </label>
       </div>

@@ -79,7 +79,8 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
   if (tagsRaw.split(",").some((tag) => tag.trim().length > 40)) errors.tags = "Each tag must be 40 characters or fewer.";
   const revisionNote = String(input.revision_note ?? "").trim();
   if (revisionNote.length > 500) errors.revision_note = "Revision note must be 500 characters or fewer.";
-  if (previousStatus && previousStatus !== status && !revisionNote) errors.revision_note = "Explain this status change for the revision history.";
+  const adminPublishing = role === "admin" && status === "published";
+  if (previousStatus && previousStatus !== status && !revisionNote && !adminPublishing) errors.revision_note = "Explain this status change for the revision history.";
 
   if (Object.keys(errors).length) return { valid: false, fieldErrors: errors, message: "Check the highlighted fields and try again." };
   return { valid: true, payload, tags, revisionNote };

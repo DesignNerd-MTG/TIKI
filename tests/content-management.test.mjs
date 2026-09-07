@@ -108,12 +108,15 @@ describe("content validation and failure handling", () => {
     }
   });
 
-  it("requires an audit note when status changes", () => {
-    const result = validateContentInput("link", "editor", {
+  it("requires editor audit notes but lets an admin publish directly", () => {
+    const input = {
       label: "Crew portal", category: "Operations", url: "https://example.com", description: "", status: "published", tags: "", revision_note: "",
-    }, "draft");
-    assert.equal(result.valid, false);
-    if (!result.valid) assert.match(result.fieldErrors.revision_note, /status change/);
+    };
+    const editorResult = validateContentInput("link", "editor", input, "draft");
+    assert.equal(editorResult.valid, false);
+    if (!editorResult.valid) assert.match(editorResult.fieldErrors.revision_note, /status change/);
+    const adminResult = validateContentInput("link", "admin", input, "draft");
+    assert.equal(adminResult.valid, true);
   });
 
   it("allows only complete HTTP(S) external URLs", () => {
@@ -147,6 +150,19 @@ describe("tags, search, and record presentation", () => {
     assert.equal(getRecordMeta("location", { kind: "studio", city: "New York", region: "NY" }), "studio · New York · NY");
     assert.equal(getRecordMeta("drink", { glassware: "Double rocks", garnish: "Mint" }), "Double rocks · Mint");
     assert.deepEqual(filingDestinationKinds, ["fixture", "show", "link", "document", "location", "drink"]);
+  });
+
+  it("shows complete Link Hub entries and supports date or alphabetical sorting", async () => {
+    const pages = await readFile(new URL("../src/components/content-pages.tsx", import.meta.url), "utf8");
+    const list = await readFile(new URL("../src/components/ui.tsx", import.meta.url), "utf8");
+    assert.match(pages, /kind === "link"[\s\S]*externalUrl/);
+    assert.match(pages, /sort === "alpha"[\s\S]*config\.titleField/);
+    assert.match(pages, /Recently updated/);
+    assert.match(pages, /A–Z/);
+    assert.match(list, /record\.tags/);
+    assert.match(list, /record\.detail/);
+    assert.match(list, /record\.externalUrl/);
+    assert.match(list, /target="_blank"/);
   });
 
   it("validates useful locations and cocktail recipes as canonical knowledge", () => {
