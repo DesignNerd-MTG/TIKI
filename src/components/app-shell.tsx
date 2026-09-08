@@ -17,6 +17,7 @@ import {
   MapPinned,
   Menu,
   Martini,
+  PlaneTakeoff,
   Search,
   Settings2,
   X,
@@ -26,6 +27,7 @@ import { hasMinimumRole, roleLabel } from "@/lib/access";
 import { initials } from "@/lib/format";
 import type { AppRole } from "@/lib/types";
 import { Brand } from "@/components/brand";
+import { InstallTiki } from "@/components/install-tiki";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge, minimum: "viewer" },
@@ -38,6 +40,7 @@ const navigation = [
   { href: "/napkin/queue", label: "Napkin Queue", icon: ListChecks, minimum: "editor" },
   { href: "/locations", label: "Locations", icon: MapPinned, minimum: "viewer" },
   { href: "/drinks", label: "Drinks", icon: Martini, minimum: "viewer" },
+  { href: "/travel", label: "Travel Portal", icon: PlaneTakeoff, minimum: "viewer" },
   { href: "/vendors", label: "Vendors / Clients", icon: Building2, minimum: "editor" },
   { href: "/admin", label: "Admin", icon: Settings2, minimum: "admin" },
 ] as const;
@@ -84,6 +87,7 @@ export function AppShell({ children, name, email, role }: AppShellProps) {
         })}
       </nav>
       <div className="sidebar__footer">
+        <InstallTiki />
         <div className="user-card">
           <div className="avatar" aria-hidden="true">{initials(name || email)}</div>
           <div className="user-card__copy">

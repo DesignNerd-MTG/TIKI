@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Archive, PencilLine, Save } from "lucide-react";
+import { Archive, PencilLine, Plus, Save, Trash2 } from "lucide-react";
 
 import { archiveContentAction, deleteContentAction, fileNapkinAction, saveContentAction, type ContentActionState } from "@/app/(portal)/content-actions";
+import { sectionsForKind, type AdditionalLink, type AdditionalLinkSection } from "@/lib/additional-links";
 import { contentConfigs, filingDestinationKinds, getStatusLabel } from "@/lib/content";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
 
@@ -33,12 +34,56 @@ export function EditButton() {
   return <button className="secondary-button" type="button" onClick={moveToEditor}><PencilLine size={15} /> Edit</button>;
 }
 
+function AdditionalLinksEditor({ kind, initialLinks, error }: { kind: EntityKind; initialLinks: AdditionalLink[]; error?: string }) {
+  const sections = sectionsForKind(kind);
+  const [links, setLinks] = useState(() => initialLinks.map((link, index) => ({ ...link, clientId: link.id ?? `saved-${index}` })));
+  const nextId = useRef(initialLinks.length);
+  if (!sections.length) return null;
+
+  function addLink(section: AdditionalLinkSection) {
+    nextId.current += 1;
+    setLinks((current) => [...current, { section, label: "", url: "", position: current.length, clientId: `new-${nextId.current}` }]);
+  }
+
+  function updateLink(clientId: string, field: "label" | "url", value: string) {
+    setLinks((current) => current.map((link) => link.clientId === clientId ? { ...link, [field]: value } : link));
+  }
+
+  function removeLink(clientId: string) {
+    setLinks((current) => current.filter((link) => link.clientId !== clientId));
+  }
+
+  return sections.map((section) => {
+    const sectionLinks = links.filter((link) => link.section === section.key);
+    return (
+      <fieldset className="additional-links form-field--wide" key={section.key}>
+        <legend className="sr-only">{section.title}</legend>
+        <div className="additional-links__heading">
+          <div><strong>{section.title}</strong><small>{section.description}</small></div>
+          <button className="secondary-button" type="button" onClick={() => addLink(section.key)}><Plus size={15} /> Add Link</button>
+        </div>
+        {sectionLinks.map((link) => (
+          <div className="additional-link-row" key={link.clientId}>
+            <input type="hidden" name="additional_link_section" value={link.section} />
+            <label className="form-field"><span>Label</span><input name="additional_link_label" value={link.label} maxLength={120} onChange={(event) => updateLink(link.clientId, "label", event.target.value)} /></label>
+            <label className="form-field"><span>URL</span><input name="additional_link_url" type="url" value={link.url} placeholder="https://…" onChange={(event) => updateLink(link.clientId, "url", event.target.value)} /></label>
+            <button className="icon-button additional-link-row__remove" type="button" aria-label={`Remove ${link.label || "link"}`} onClick={() => removeLink(link.clientId)}><Trash2 size={17} /></button>
+          </div>
+        ))}
+        {!sectionLinks.length && <p className="compact-empty">No additional links.</p>}
+        {error && <small className="field-error">{error}</small>}
+      </fieldset>
+    );
+  });
+}
+
 export function ContentEditor({
   kind,
   record,
   tags = [],
   statuses,
   defaultStatus,
+  additionalLinks = [],
   adminCanPublishWithoutRevision = false,
 }: {
   kind: EntityKind;
@@ -46,6 +91,7 @@ export function ContentEditor({
   tags?: string[];
   statuses: string[];
   defaultStatus?: string;
+  additionalLinks?: AdditionalLink[];
   adminCanPublishWithoutRevision?: boolean;
 }) {
   const config = contentConfigs[kind];
@@ -85,6 +131,8 @@ export function ContentEditor({
             </label>
           );
         })}
+
+        <AdditionalLinksEditor kind={kind} initialLinks={additionalLinks} error={state.fieldErrors?.additional_links} />
 
         {showStatusControl ? (
           <label className="form-field">

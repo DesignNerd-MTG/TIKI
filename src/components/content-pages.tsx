@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { ArchiveButton, ContentEditor, DeleteButton, EditButton, FileNapkinControl } from "@/components/content-editor";
 import { DatabaseNotice, EmptyState, PageHeader, RecordList, StatusPill } from "@/components/ui";
+import { sectionsForKind, type AdditionalLink } from "@/lib/additional-links";
 import { contentConfigs, getRecordDetail, getRecordMeta, getRecordTitle } from "@/lib/content";
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent } from "@/lib/content-rules";
 import { requireActiveProfile } from "@/lib/auth";
@@ -162,10 +163,14 @@ export async function ContentDetailPage({
   const result = await supabase.from(config.table).select("*").eq("id", id).maybeSingle();
   if (!result.data) notFound();
   const record = result.data as ManagedRecord;
-  const [tags, revisionsResult] = await Promise.all([
+  const [tags, revisionsResult, additionalLinksResult] = await Promise.all([
     getTags(kind, id),
     supabase.from("revision_notes").select("id,summary,source,created_at").eq("entity_kind", kind).eq("entity_id", id).order("created_at", { ascending: false }).limit(30),
+    sectionsForKind(kind).length
+      ? supabase.from("additional_links").select("id,section,label,url,position").eq("entity_kind", kind).eq("entity_id", id).order("position", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
   ]);
+  const additionalLinks = (additionalLinksResult.data ?? []) as AdditionalLink[];
   const mayEdit = canEditContent(profile.role, identity.id, kind, record);
   const mayArchive = record.status !== "archived" && canArchiveContent(profile.role, identity.id, kind, record);
   const title = getRecordTitle(kind, record);
@@ -204,7 +209,8 @@ export async function ContentDetailPage({
           <div className="panel__heading"><div><p className="eyebrow">Source material</p><h2>Authoritative links</h2></div></div>
           <div className="reference-links">
             {externalFields.map((field) => <a href={stringify(record[field.name])} target="_blank" rel="noreferrer" key={field.name}><span><strong>{field.label}</strong>{stringify(record[field.name])}</span><ArrowUpRight size={16} /></a>)}
-            {!externalFields.length && <p className="compact-empty">No external source links have been attached.</p>}
+            {additionalLinks.map((link) => <a href={link.url} target="_blank" rel="noreferrer" key={link.id ?? `${link.section}-${link.position}`}><span><strong>{link.label}</strong>{link.url}</span><ArrowUpRight size={16} /></a>)}
+            {!externalFields.length && !additionalLinks.length && <p className="compact-empty">No external source links have been attached.</p>}
           </div>
         </section>
       </div>
@@ -220,7 +226,7 @@ export async function ContentDetailPage({
       {mayEdit ? (
         <section className="panel editor-panel" id="edit-record">
           <div className="panel__heading"><div><p className="eyebrow">Role-aware controls</p><h2>Edit {config.singular.toLowerCase()}</h2></div></div>
-          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} adminCanPublishWithoutRevision={profile.role === "admin"} />
+          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} additionalLinks={additionalLinks} adminCanPublishWithoutRevision={profile.role === "admin"} />
         </section>
       ) : (
         <div className="notice notice--neutral">This record is read-only for your current role.</div>

@@ -8,6 +8,8 @@ export const metadata: Metadata = {
     template: "%s | T.I.K.I.",
   },
   description: "Technical Information & Knowledge Index for the LDG Entertainment Division.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "T.I.K.I.", statusBarStyle: "black-translucent" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

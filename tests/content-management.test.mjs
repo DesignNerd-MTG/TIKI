@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
 import { contentConfigs, countryOptions, filingDestinationKinds, getCountryLabel, getRecordDetail, getRecordMeta, getRecordTitle, getStatusLabel } from "../src/lib/content.ts";
+import { readAdditionalLinks, validateAdditionalLinks } from "../src/lib/additional-links.ts";
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent, canSetStatus } from "../src/lib/content-rules.ts";
 import { buildSearchPattern, isSafeExternalUrl, isUuid, normalizeTags, slugifyTag, validateContentInput } from "../src/lib/content-validation.ts";
 import { defaultTheme, isThemePreset, resolveTheme, themePresets } from "../src/lib/theme.ts";
@@ -174,6 +175,39 @@ describe("tags, search, and record presentation", () => {
     assert.match(list, /target="_blank"/);
   });
 
+  it("keeps common fixture and show links explicit and edge cases reusable", () => {
+    const fixtureFields = contentConfigs.fixture.fields;
+    const showFields = contentConfigs.show.fields;
+    assert.equal(fixtureFields.find((field) => field.name === "dmx_footprint")?.label, "DMX Footprint in Preferred Mode");
+    assert.deepEqual(fixtureFields.filter((field) => ["fixture_page_url", "manual_url", "dmx_chart_url", "showfile_url"].includes(field.name)).map((field) => field.label), [
+      "Fixture Page Link", "Manual Link", "DMX Chart Link", "Link to Showfile with Fixture Included",
+    ]);
+    assert.equal(fixtureFields.some((field) => field.name === "typical_use"), false);
+    assert.equal(showFields.some((field) => field.name === "primary_link"), false);
+    assert.ok(showFields.some((field) => field.name === "dropbox_url" && field.label === "Dropbox Link"));
+    assert.ok(showFields.some((field) => field.name === "egnyte_url" && field.label === "Egnyte Link"));
+    assert.ok(showFields.some((field) => field.name === "staffing_notes" && field.label === "Staffing / Crew Notes"));
+    assert.ok(showFields.some((field) => field.name === "staffing_calendar_url" && field.label === "Staffing Calendar"));
+  });
+
+  it("validates ordered reusable fixture and staffing links", () => {
+    const links = [
+      { section: "fixture", label: "Photometrics", url: "https://example.com/photo", position: 0 },
+      { section: "fixture", label: "Firmware", url: "https://example.com/firmware", position: 1 },
+    ];
+    assert.equal(validateAdditionalLinks("fixture", links).valid, true);
+    assert.equal(validateAdditionalLinks("fixture", [{ ...links[0], url: "javascript:alert(1)" }]).valid, false);
+    assert.equal(validateAdditionalLinks("show", [{ ...links[0], section: "fixture" }]).valid, false);
+
+    const formData = new FormData();
+    formData.append("additional_link_section", "show_staffing");
+    formData.append("additional_link_label", "Rooming List");
+    formData.append("additional_link_url", "https://example.com/rooms");
+    const parsed = readAdditionalLinks(formData, "show");
+    assert.equal(parsed.valid, true);
+    if (parsed.valid) assert.deepEqual(parsed.links.map(({ section, label, url, position }) => ({ section, label, url, position })), [{ section: "show_staffing", label: "Rooming List", url: "https://example.com/rooms", position: 0 }]);
+  });
+
   it("sorts Locations by city and offers international country selection", async () => {
     const pages = await readFile(new URL("../src/components/content-pages.tsx", import.meta.url), "utf8");
     const sql = await readFile(new URL("../supabase/migrations/202609070008_location_country.sql", import.meta.url), "utf8");
@@ -259,6 +293,32 @@ describe("Supabase RLS migration", () => {
     assert.match(sql, /when 'location'/i);
     assert.match(sql, /when 'drink'/i);
     assert.doesNotMatch(sql, /service_role|sb_secret_/i);
+  });
+
+  it("adds backward-safe fixture, show, dynamic-link, and private travel storage", async () => {
+    const sql = await readFile(new URL("../supabase/migrations/202609080001_travel_fixture_show_links.sql", import.meta.url), "utf8");
+    assert.match(sql, /add column if not exists fixture_page_url text/i);
+    assert.match(sql, /add column if not exists showfile_url text/i);
+    assert.match(sql, /add column if not exists dropbox_url text/i);
+    assert.match(sql, /add column if not exists egnyte_url text/i);
+    assert.match(sql, /add column if not exists staffing_notes text/i);
+    assert.match(sql, /add column if not exists staffing_calendar_url text/i);
+    assert.match(sql, /create table if not exists public\.additional_links/i);
+    assert.match(sql, /create or replace function public\.set_additional_links/i);
+    assert.match(sql, /'Legacy Show Link'/i);
+    assert.match(sql, /dropbox\\\.com/i);
+    assert.match(sql, /egnyte\\\.com/i);
+    assert.doesNotMatch(sql, /drop column[^;]*(typical_use|primary_link)/i);
+    assert.match(sql, /create table if not exists public\.travel_profiles/i);
+    assert.match(sql, /user_id = auth\.uid\(\)/i);
+  });
+
+  it("keeps private travel details out of global search", async () => {
+    const search = await readFile(new URL("../src/app/(portal)/search/page.tsx", import.meta.url), "utf8");
+    assert.match(search, /from\("fixtures"\)/);
+    assert.match(search, /from\("shows"\)/);
+    assert.match(search, /staffing_notes\.ilike/);
+    assert.doesNotMatch(search, /travel_profiles|travel[_ ]preferences|flighty_url/i);
   });
 
   it("turns the Napkin into a shared stored-review-filed repository", async () => {

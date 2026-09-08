@@ -71,13 +71,14 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
       { name: "manufacturer", label: "Manufacturer", type: "text", maxLength: 120 },
       { name: "fixture_type", label: "Fixture type", type: "text", maxLength: 120 },
       { name: "preferred_mode", label: "LDG preferred mode", type: "text", maxLength: 160 },
-      { name: "dmx_footprint", label: "DMX footprint", type: "number", help: "Positive channel count." },
-      { name: "typical_use", label: "Typical use", type: "text", maxLength: 240 },
+      { name: "dmx_footprint", label: "DMX Footprint in Preferred Mode", type: "number", help: "Positive channel count." },
       { name: "power_note", label: "Power notes", type: "textarea", maxLength: 4000, wide: true },
       { name: "control_note", label: "Data / control notes", type: "textarea", maxLength: 4000, wide: true },
       { name: "field_notes", label: "Field notes", type: "textarea", maxLength: 4000, wide: true },
-      { name: "dmx_chart_url", label: "DMX chart URL", type: "url", placeholder: "https://…" },
-      { name: "manual_url", label: "Manufacturer manual URL", type: "url", placeholder: "https://…" },
+      { name: "fixture_page_url", label: "Fixture Page Link", type: "url", placeholder: "https://…" },
+      { name: "manual_url", label: "Manual Link", type: "url", placeholder: "https://…" },
+      { name: "dmx_chart_url", label: "DMX Chart Link", type: "url", placeholder: "https://…" },
+      { name: "showfile_url", label: "Link to Showfile with Fixture Included", type: "url", placeholder: "https://…", wide: true },
     ],
   },
   show: {
@@ -91,8 +92,11 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
       { name: "location", label: "Location", type: "text", maxLength: 240 },
       { name: "start_date", label: "Start date", type: "date" },
       { name: "end_date", label: "End date", type: "date" },
-      { name: "primary_link", label: "Authoritative show URL", type: "url", placeholder: "https://…", wide: true },
       { name: "summary", label: "Show summary", type: "textarea", maxLength: 4000, wide: true },
+      { name: "dropbox_url", label: "Dropbox Link", type: "url", placeholder: "https://…" },
+      { name: "egnyte_url", label: "Egnyte Link", type: "url", placeholder: "https://…" },
+      { name: "staffing_notes", label: "Staffing / Crew Notes", type: "textarea", maxLength: 8000, wide: true },
+      { name: "staffing_calendar_url", label: "Staffing Calendar", type: "url", placeholder: "https://…", wide: true },
     ],
   },
   link: {
@@ -199,7 +203,7 @@ export function getRecordMeta(kind: EntityKind, record: Record<string, unknown>)
 
 export function getRecordDetail(kind: EntityKind, record: Record<string, unknown>) {
   const keys: Record<EntityKind, string[]> = {
-    fixture: ["preferred_mode", "typical_use"], show: ["summary"], link: ["description"],
+    fixture: ["preferred_mode", "field_notes"], show: ["summary", "staffing_notes"], link: ["description"],
     document: ["description"], location: ["notes", "address"], drink: ["description", "ingredients"], vendor_client: ["notes"], napkin: ["source_url"],
   };
   for (const key of keys[kind]) {

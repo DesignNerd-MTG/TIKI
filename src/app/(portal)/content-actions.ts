@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { contentConfigs, filingDestinationKinds, type FilingDestinationKind } from "@/lib/content";
+import { readAdditionalLinks, sectionsForKind, type AdditionalLink } from "@/lib/additional-links";
 import { canArchiveContent, canCreateContent, canDeleteContent, canEditContent } from "@/lib/content-rules";
 import { isUuid, validateContentInput, type ContentInput } from "@/lib/content-validation";
 import { getIdentityAndProfile } from "@/lib/auth";
@@ -42,6 +43,18 @@ async function syncTags(supabase: Awaited<ReturnType<typeof createClient>>, kind
   return result.error?.message ?? null;
 }
 
+async function syncAdditionalLinks(supabase: Awaited<ReturnType<typeof createClient>>, kind: EntityKind, entityId: string, links: AdditionalLink[]) {
+  if (!sectionsForKind(kind).length) return null;
+  const result = await supabase.rpc("set_additional_links", {
+    target_kind: kind,
+    target_id: entityId,
+    link_sections: links.map((link) => link.section),
+    link_labels: links.map((link) => link.label),
+    link_urls: links.map((link) => link.url),
+  });
+  return result.error?.message ?? null;
+}
+
 export async function saveContentAction(_previous: ContentActionState, formData: FormData): Promise<ContentActionState> {
   const kindValue = String(formData.get("_entity_kind") ?? "");
   if (!isEntityKind(kindValue)) return { ok: false, message: "Unknown content type." };
@@ -67,6 +80,8 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   const input = readInput(formData, kind);
   const validation = validateContentInput(kind, profile.role, input, existing?.status);
   if (!validation.valid) return { ok: false, message: validation.message, fieldErrors: validation.fieldErrors };
+  const additionalLinks = readAdditionalLinks(formData, kind);
+  if (!additionalLinks.valid) return { ok: false, message: "Check the additional links and try again.", fieldErrors: { additional_links: additionalLinks.message } };
 
   const payload: Record<string, unknown> = { ...validation.payload };
   if (!existing) payload.created_by = identity.id;
@@ -84,7 +99,10 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   if (result.error || !result.data) return { ok: false, message: `T.I.K.I. could not save this ${config.singular.toLowerCase()}. ${result.error?.message ?? "Try again."}` };
 
   const recordId = String(result.data.id);
-  const tagError = await syncTags(supabase, kind, recordId, validation.tags);
+  const [tagError, additionalLinkError] = await Promise.all([
+    syncTags(supabase, kind, recordId, validation.tags),
+    syncAdditionalLinks(supabase, kind, recordId, additionalLinks.links),
+  ]);
   let revisionError: string | null = null;
   if (validation.revisionNote) {
     const revision = await supabase.from("revision_notes").insert({
@@ -104,7 +122,7 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   revalidatePath(`${config.route}/${recordId}`);
   revalidatePath("/dashboard");
   revalidatePath("/search");
-  const warnings = [tagError ? `tags: ${tagError}` : null, revisionError ? `revision note: ${revisionError}` : null].filter(Boolean);
+  const warnings = [tagError ? `tags: ${tagError}` : null, additionalLinkError ? `additional links: ${additionalLinkError}` : null, revisionError ? `revision note: ${revisionError}` : null].filter(Boolean);
   return {
     ok: true,
     message: warnings.length ? `Content saved, but some metadata needs another try (${warnings.join("; ")}).` : `${config.singular} saved.`,
@@ -201,6 +219,7 @@ export async function deleteContentAction(_previous: ContentActionState, formDat
   if (!result.error) {
     await supabase.from("content_tags").delete().eq("entity_kind", kindValue).eq("entity_id", id);
     await supabase.from("revision_notes").delete().eq("entity_kind", kindValue).eq("entity_id", id);
+    await supabase.from("additional_links").delete().eq("entity_kind", kindValue).eq("entity_id", id);
     revalidatePath(config.route);
     revalidatePath("/dashboard");
     redirect(kindValue === "napkin" ? "/napkin/pile?deleted=1" : `${config.route}?deleted=1`);
