@@ -5,6 +5,22 @@ export const napkinStatuses = ["raw", "needs_review", "converted", "archived"] a
 export const filingDestinationKinds = ["fixture", "show", "link", "document", "location", "drink"] as const;
 export type FilingDestinationKind = (typeof filingDestinationKinds)[number];
 
+const countryDisplayNames = new Intl.DisplayNames(["en"], { type: "region" });
+const countryCodes = `AF AL DZ AD AO AG AR AM AU AT AZ BS BH BD BB BY BE BZ BJ BT BO BA BW BR BN BG BF BI CV KH CM CA CF TD CL CN CO KM CG CD CR CI HR CU CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FJ FI FR GA GM GE DE GH GR GD GT GN GW GY HT HN HU IS IN ID IR IQ IE IL IT JM JP JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MG MW MY MV ML MT MH MR MU MX FM MD MC MN ME MA MZ MM NA NR NP NL NZ NI NE NG MK NO OM PK PW PS PA PG PY PE PH PL PT QA RO RU RW KN LC VC WS SM ST SA SN RS SC SL SG SK SI SB SO ZA SS ES LK SD SR SE CH SY TW TJ TZ TH TL TG TO TT TN TR TM TV UG UA AE GB UY UZ VU VA VE VN YE ZM ZW XK`.split(" ");
+
+export const countryOptions = [
+  { value: "US", label: "United States" },
+  ...countryCodes
+    .filter((code) => code !== "US")
+    .map((code) => ({ value: code, label: countryDisplayNames.of(code) ?? code }))
+    .sort((a, b) => a.label.localeCompare(b.label)),
+];
+
+export function getCountryLabel(code: unknown) {
+  if (typeof code !== "string" || !code) return "";
+  return countryDisplayNames.of(code) ?? code;
+}
+
 const statusLabels: Record<string, string> = {
   draft: "Draft",
   submitted: "Awaiting approval",
@@ -117,6 +133,7 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
       { name: "address", label: "Address", type: "text", maxLength: 300, wide: true },
       { name: "city", label: "City", type: "text", maxLength: 120 },
       { name: "region", label: "State / region", type: "text", maxLength: 120 },
+      { name: "country", label: "Country", type: "select", required: true, options: countryOptions },
       { name: "phone", label: "Phone", type: "text", maxLength: 80 },
       { name: "website_url", label: "Website", type: "url", placeholder: "https://…" },
       { name: "map_url", label: "Map link", type: "url", placeholder: "https://…", wide: true },
@@ -173,7 +190,7 @@ export function getRecordMeta(kind: EntityKind, record: Record<string, unknown>)
     case "show": return strings(record.job_number ? `Job ${record.job_number}` : null, record.client_name, record.location).join(" · ") || "Show details pending";
     case "link": return typeof record.category === "string" ? record.category : "General";
     case "document": return typeof record.document_type === "string" && record.document_type ? record.document_type : "Reference document";
-    case "location": return strings(record.kind, record.city, record.region).join(" · ") || "Location details pending";
+    case "location": return strings(record.kind, record.city, record.region, record.country && record.country !== "US" ? getCountryLabel(record.country) : null).join(" · ") || "Location details pending";
     case "drink": return strings(record.glassware, record.garnish).join(" · ") || "Cocktail recipe";
     case "vendor_client": return strings(record.kind, record.primary_contact).join(" · ") || "Contact details pending";
     case "napkin": return record.urgent ? "Important field note" : "Working knowledge";

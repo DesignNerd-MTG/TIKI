@@ -75,11 +75,13 @@ export async function ContentIndexPage({
     createClient(),
   ]);
   const showArchived = params.view === "archived" && (profile.role === "editor" || profile.role === "admin");
-  const sort = params.sort === "alpha" ? "alpha" : "date";
+  const sort = params.sort === "alpha" || (kind === "location" && params.sort === "city") ? params.sort : "date";
   let query = supabase.from(config.table).select("*");
-  query = sort === "alpha"
-    ? query.order(config.titleField, { ascending: true }).order("updated_at", { ascending: false })
-    : query.order("updated_at", { ascending: false });
+  query = sort === "city"
+    ? query.order("city", { ascending: true, nullsFirst: false }).order(config.titleField, { ascending: true })
+    : sort === "alpha"
+      ? query.order(config.titleField, { ascending: true }).order("updated_at", { ascending: false })
+      : query.order("updated_at", { ascending: false });
   query = showArchived ? query.eq("status", "archived") : query.neq("status", "archived");
   const { data, error } = await query.limit(100);
   const tagMap = kind === "link" ? await getTagsForRecords(kind, (data ?? []).map((record) => String(record.id))) : new Map<string, string[]>();
@@ -103,6 +105,7 @@ export async function ContentIndexPage({
         <span>Sort</span>
         <Link className={sort === "date" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=date`}>Recently updated</Link>
         <Link className={sort === "alpha" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=alpha`}>A–Z</Link>
+        {kind === "location" && <Link className={sort === "city" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=city`}>City</Link>}
       </div>
       {mayReviewArchive && <Link className="secondary-button" href={showArchived ? `${browseRoute}?sort=${sort}` : `${browseRoute}?view=archived&sort=${sort}`}>{showArchived ? "Current records" : "Archived"}</Link>}
       {mayCreate && !inlineCreate && <Link className="primary-button" href={createRoute ?? `${config.route}/new`}><Plus size={16} /> {createLabel ?? `Add ${config.singular.toLowerCase()}`}</Link>}

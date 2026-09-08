@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
-import { contentConfigs, filingDestinationKinds, getRecordDetail, getRecordMeta, getRecordTitle, getStatusLabel } from "../src/lib/content.ts";
+import { contentConfigs, countryOptions, filingDestinationKinds, getCountryLabel, getRecordDetail, getRecordMeta, getRecordTitle, getStatusLabel } from "../src/lib/content.ts";
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent, canSetStatus } from "../src/lib/content-rules.ts";
 import { buildSearchPattern, isSafeExternalUrl, isUuid, normalizeTags, slugifyTag, validateContentInput } from "../src/lib/content-validation.ts";
 import { defaultTheme, isThemePreset, resolveTheme, themePresets } from "../src/lib/theme.ts";
@@ -155,7 +155,8 @@ describe("tags, search, and record presentation", () => {
     assert.equal(getRecordMeta("fixture", fixture), "Chroma-Q · Batten");
     assert.equal(getRecordDetail("fixture", fixture), "RGBA");
     assert.equal(getRecordMeta("show", { job_number: "LDG-260907", client_name: "ESPN", location: "Bristol" }), "Job LDG-260907 · ESPN · Bristol");
-    assert.equal(getRecordMeta("location", { kind: "studio", city: "New York", region: "NY" }), "studio · New York · NY");
+    assert.equal(getRecordMeta("location", { kind: "studio", city: "New York", region: "NY", country: "US" }), "studio · New York · NY");
+    assert.equal(getRecordMeta("location", { kind: "venue", city: "London", country: "GB" }), "venue · London · United Kingdom");
     assert.equal(getRecordMeta("drink", { glassware: "Double rocks", garnish: "Mint" }), "Double rocks · Mint");
     assert.deepEqual(filingDestinationKinds, ["fixture", "show", "link", "document", "location", "drink"]);
   });
@@ -173,13 +174,25 @@ describe("tags, search, and record presentation", () => {
     assert.match(list, /target="_blank"/);
   });
 
+  it("sorts Locations by city and offers international country selection", async () => {
+    const pages = await readFile(new URL("../src/components/content-pages.tsx", import.meta.url), "utf8");
+    const sql = await readFile(new URL("../supabase/migrations/202609070008_location_country.sql", import.meta.url), "utf8");
+    assert.equal(countryOptions[0].value, "US");
+    assert.equal(countryOptions[0].label, "United States");
+    assert.equal(getCountryLabel("JP"), "Japan");
+    assert.ok(countryOptions.length > 190);
+    assert.match(pages, /sort === "city"[\s\S]*order\("city"/);
+    assert.match(pages, />City<\/Link>/);
+    assert.match(sql, /add column if not exists country text not null default 'US'/i);
+  });
+
   it("validates useful locations and cocktail recipes as canonical knowledge", () => {
     assert.equal(canCreateContent("viewer", "drink"), false);
     assert.equal(canCreateContent("contributor", "drink"), true);
     assert.equal(canCreateContent("contributor", "location"), true);
 
     const location = validateContentInput("location", "contributor", {
-      name: "Useful Studio", kind: "studio", address: "1 Main St", city: "New York", region: "NY", phone: "",
+      name: "Useful Studio", kind: "studio", address: "1 Main St", city: "New York", region: "NY", country: "US", phone: "",
       website_url: "https://example.com", map_url: "https://maps.example.com", notes: "Freight entrance on the west side.",
       status: "draft", tags: "studio", revision_note: "",
     });

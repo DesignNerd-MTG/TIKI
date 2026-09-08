@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Boxes, BookOpenText, Building2, ClipboardPenLine, FileText, Link2, MapPinned, Martini, Search, Tags } from "lucide-react";
 
 import { EmptyState, PageHeader, RecordList } from "@/components/ui";
-import { contentConfigs, getStatusLabel } from "@/lib/content";
+import { contentConfigs, getCountryLabel, getStatusLabel } from "@/lib/content";
 import { buildSearchPattern } from "@/lib/content-validation";
 import { requireActiveProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -30,7 +30,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       supabase.from("shows").select("id,title,job_number,client_name,location,summary").neq("status", "archived").or(`title.ilike.${pattern},job_number.ilike.${pattern},client_name.ilike.${pattern},location.ilike.${pattern},summary.ilike.${pattern}`).limit(12),
       supabase.from("documents").select("id,title,document_type,description").neq("status", "archived").or(`title.ilike.${pattern},document_type.ilike.${pattern},description.ilike.${pattern}`).limit(12),
       supabase.from("link_items").select("id,label,category,description").neq("status", "archived").or(`label.ilike.${pattern},category.ilike.${pattern},description.ilike.${pattern}`).limit(12),
-      supabase.from("locations").select("id,name,kind,address,city,region,notes").neq("status", "archived").or(`name.ilike.${pattern},kind.ilike.${pattern},address.ilike.${pattern},city.ilike.${pattern},region.ilike.${pattern},notes.ilike.${pattern}`).limit(12),
+      supabase.from("locations").select("id,name,kind,address,city,region,country,notes").neq("status", "archived").or(`name.ilike.${pattern},kind.ilike.${pattern},address.ilike.${pattern},city.ilike.${pattern},region.ilike.${pattern},country.ilike.${pattern},notes.ilike.${pattern}`).limit(12),
       supabase.from("drinks").select("id,name,description,ingredients,glassware,garnish").neq("status", "archived").or(`name.ilike.${pattern},description.ilike.${pattern},ingredients.ilike.${pattern},glassware.ilike.${pattern},garnish.ilike.${pattern}`).limit(12),
       vendorRequest,
       supabase.from("napkin_notes").select("id,body,urgent,status").neq("status", "archived").or(`body.ilike.${pattern},source_url.ilike.${pattern}`).limit(12),
@@ -42,7 +42,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       { label: "Shows", icon: BookOpenText, records: (shows.data ?? []).map((item) => ({ id: item.id, title: item.title, meta: [item.job_number ? `Job ${item.job_number}` : null, item.client_name, item.location].filter(Boolean).join(" · ") || "Show", detail: item.summary, href: `/shows/${item.id}` })) },
       { label: "Documents", icon: FileText, records: (documents.data ?? []).map((item) => ({ id: item.id, title: item.title, meta: item.document_type || "Document", detail: item.description, href: `/documents/${item.id}` })) },
       { label: "Links", icon: Link2, records: (links.data ?? []).map((item) => ({ id: item.id, title: item.label, meta: item.category, detail: item.description, href: `/links/${item.id}` })) },
-      { label: "Locations", icon: MapPinned, records: (locations.data ?? []).map((item) => ({ id: item.id, title: item.name, meta: [item.kind, item.city, item.region].filter(Boolean).join(" · ") || "Useful place", detail: [item.address, item.notes].filter(Boolean).join(" · "), href: `/locations/${item.id}` })) },
+      { label: "Locations", icon: MapPinned, records: (locations.data ?? []).map((item) => ({ id: item.id, title: item.name, meta: [item.kind, item.city, item.region, item.country !== "US" ? getCountryLabel(item.country) : null].filter(Boolean).join(" · ") || "Useful place", detail: [item.address, item.notes].filter(Boolean).join(" · "), href: `/locations/${item.id}` })) },
       { label: "Drinks", icon: Martini, records: (drinks.data ?? []).map((item) => ({ id: item.id, title: item.name, meta: [item.glassware, item.garnish].filter(Boolean).join(" · ") || "Cocktail recipe", detail: item.description || item.ingredients, href: `/drinks/${item.id}` })) },
       { label: "Vendors & clients", icon: Building2, records: (vendors.data ?? []).map((item) => ({ id: item.id, title: item.name, meta: item.kind, detail: [item.primary_contact, item.notes].filter(Boolean).join(" · "), href: `/vendors/${item.id}` })) },
       { label: "Napkin", icon: ClipboardPenLine, records: (napkin.data ?? []).map((item) => ({ id: item.id, title: item.body.length > 90 ? `${item.body.slice(0, 90)}…` : item.body, meta: item.urgent ? "Important note" : "Working knowledge", detail: getStatusLabel(item.status), href: `/napkin/${item.id}` })) },
