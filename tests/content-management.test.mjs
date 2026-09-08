@@ -362,6 +362,17 @@ describe("Supabase RLS migration", () => {
     assert.doesNotMatch(sql, /service_role|sb_secret_/i);
   });
 
+  it("preserves Show source links when filing Napkins through the refined link model", async () => {
+    const sql = await readFile(new URL("../supabase/migrations/202609080002_preserve_filed_show_links.sql", import.meta.url), "utf8");
+    assert.match(sql, /insert into public\.shows \(title, summary, primary_link, dropbox_url, egnyte_url/i);
+    assert.match(sql, /dropbox\\\.com/i);
+    assert.match(sql, /egnyte\\\.com/i);
+    assert.match(sql, /insert into public\.additional_links/i);
+    assert.match(sql, /'show_files', 'Legacy Show Link'/i);
+    assert.match(sql, /not is_dropbox_link[\s\S]*not is_egnyte_link/i);
+    assert.doesNotMatch(sql, /service_role|sb_secret_/i);
+  });
+
   it("uses Published as the only approved reader-visible state", async () => {
     const sql = await readFile(new URL("../supabase/migrations/202609070007_simplify_publication_status.sql", import.meta.url), "utf8");
     assert.match(sql, /set status = 'published' where status = 'verified'/i);
