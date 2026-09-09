@@ -7,6 +7,7 @@ import { readAdditionalLinks, validateAdditionalLinks } from "../src/lib/additio
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent, canSetStatus } from "../src/lib/content-rules.ts";
 import { buildSearchPattern, isSafeExternalUrl, isUuid, normalizeTags, slugifyTag, validateContentInput } from "../src/lib/content-validation.ts";
 import { defaultTheme, isThemePreset, resolveTheme, themePresets } from "../src/lib/theme.ts";
+import { matchesTravelProfileName } from "../src/lib/travel-search.ts";
 
 const ownDraft = { created_by: "user-1", status: "draft" };
 const ownPublished = { created_by: "user-1", status: "published" };
@@ -325,12 +326,17 @@ describe("Supabase RLS migration", () => {
     assert.match(form, /<span>Name<\/span>[\s\S]*name="name"/);
   });
 
-  it("keeps private travel details out of global search", async () => {
+  it("searches travel-profile names without exposing private travel details", async () => {
     const search = await readFile(new URL("../src/app/(portal)/search/page.tsx", import.meta.url), "utf8");
     assert.match(search, /from\("fixtures"\)/);
     assert.match(search, /from\("shows"\)/);
     assert.match(search, /staffing_notes\.ilike/);
-    assert.doesNotMatch(search, /travel_profiles|travel[_ ]preferences|flighty_url/i);
+    assert.match(search, /from\("travel_profiles"\)\.select\("user_id,name"\)/);
+    assert.doesNotMatch(search, /travel_profiles[\s\S]{0,120}(details|flighty_url)/i);
+    assert.doesNotMatch(search, /(details|flighty_url)\.ilike/i);
+    assert.equal(matchesTravelProfileName("Mike Grabowski", "Mike Grabowski Travel Prefs"), true);
+    assert.equal(matchesTravelProfileName("Mike Grabowski", "Mike Grabowski Travel Preferences"), true);
+    assert.equal(matchesTravelProfileName("Mike Grabowski", "United"), false);
   });
 
   it("turns the Napkin into a shared stored-review-filed repository", async () => {
