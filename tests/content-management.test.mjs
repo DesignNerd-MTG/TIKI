@@ -313,6 +313,18 @@ describe("Supabase RLS migration", () => {
     assert.match(sql, /user_id = auth\.uid\(\)/i);
   });
 
+  it("stores an optional private traveler name without changing search", async () => {
+    const sql = await readFile(new URL("../supabase/migrations/202609080003_travel_name.sql", import.meta.url), "utf8");
+    const action = await readFile(new URL("../src/app/(portal)/travel/actions.ts", import.meta.url), "utf8");
+    const page = await readFile(new URL("../src/app/(portal)/travel/page.tsx", import.meta.url), "utf8");
+    const form = await readFile(new URL("../src/components/travel-form.tsx", import.meta.url), "utf8");
+    assert.match(sql, /add column if not exists name text/i);
+    assert.match(action, /formData\.get\("name"\)/);
+    assert.match(action, /name: name \|\| null/);
+    assert.match(page, /select\("name,details,flighty_url,updated_at"\)/);
+    assert.match(form, /<span>Name<\/span>[\s\S]*name="name"/);
+  });
+
   it("keeps private travel details out of global search", async () => {
     const search = await readFile(new URL("../src/app/(portal)/search/page.tsx", import.meta.url), "utf8");
     assert.match(search, /from\("fixtures"\)/);

@@ -11,7 +11,8 @@ export const metadata: Metadata = { title: "Travel Portal" };
 export default async function TravelPage() {
   const { identity } = await requireActiveProfile();
   const supabase = await createClient();
-  const { data } = await supabase.from("travel_profiles").select("details,flighty_url,updated_at").eq("user_id", identity.id).maybeSingle();
+  const { data } = await supabase.from("travel_profiles").select("name,details,flighty_url,updated_at").eq("user_id", identity.id).maybeSingle();
+  const name = typeof data?.name === "string" ? data.name : "";
   const details = typeof data?.details === "string" ? data.details : "";
   const flightyUrl = typeof data?.flighty_url === "string" ? data.flighty_url : "";
 
@@ -22,7 +23,7 @@ export default async function TravelPage() {
       {flightyUrl && <a className="travel-flighty-link" href={flightyUrl} target="_blank" rel="noreferrer"><span><strong>Open Flighty</strong>Live flight and trip information</span><ArrowUpRight size={18} /></a>}
       <section className="panel editor-panel">
         <div className="panel__heading"><div><p className="eyebrow">Your travel reference</p><h2>Preferences and details</h2></div></div>
-        <TravelForm details={details} flightyUrl={flightyUrl} />
+        <TravelForm name={name} details={details} flightyUrl={flightyUrl} />
       </section>
     </div>
   );
