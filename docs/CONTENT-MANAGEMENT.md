@@ -4,7 +4,7 @@ This milestone uses the existing Supabase Free-plan tables and browser-safe publ
 
 ## Workflows
 
-Fixtures, Shows, Link Hub, Documents, and Vendors / Clients share the same workflow:
+Fixtures, Shows, Link Hub, Documents, and Vendors / Manufacturers share the same workflow:
 
 1. Create a draft with field-level validation and optional tags.
 2. Open a local detail page instead of jumping directly to the external source.
@@ -28,7 +28,7 @@ Show records include an optional job number. It appears in create/edit forms, re
 | Create canonical drafts | No | Yes | Yes | Yes |
 | Edit own draft/submitted content | No | Yes | Yes | Yes |
 | Review or publish content | No | No | Yes | Yes |
-| Access Vendors / Clients | No | No | Yes | Yes |
+| Access Vendors / Manufacturers | No | No | Yes | Yes |
 | Manage people and roles | No | No | No | Yes |
 | Permanently delete archived content | No | No | No | Yes |
 

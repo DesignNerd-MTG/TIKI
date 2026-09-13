@@ -70,7 +70,7 @@ describe("Reference capture and migration",()=>{
   it("retains private Travel details exclusion while using Reference Hub search",async()=>{
     const source=await readFile(new URL("../src/app/(portal)/search/page.tsx",import.meta.url),"utf8");
     assert.match(source,/rpc\("search_references"/);
-    assert.match(source,/from\("travel_profiles"\)\.select\("user_id,name"\)/);
+    assert.doesNotMatch(source,/from\("travel_profiles"\)/);
     assert.doesNotMatch(source,/select\("[^"]*(?:passport|seat_preference|preferences|loyalty|date_of_birth)/);
   });
 });

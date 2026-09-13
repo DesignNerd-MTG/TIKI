@@ -53,7 +53,7 @@ it('avatar component renders protected images, falls back to initials and retrie
   render().props.onError();assert.equal(render(),'MG');assert.equal(render('owner','2').type,'img');assert.equal(render(null),'MG');
 });
 it('sidebar/profile/social share canonical name and avatar without widening directory queries or widths',async()=>{
-  const shell=await read('src/components/app-shell.tsx');assert.match(shell,/href="\/profile"/);assert.match(shell,/<MemberAvatar/);
+  const shell=await read('src/components/app-shell.tsx');assert.match(shell,/href="\/account"/);assert.match(shell,/<MemberAvatar/);
   const profile=await read('src/app/(portal)/profile/page.tsx');assert.match(profile,/requireActiveProfile\(/);assert.match(profile,/<DirectoryName name=\{profile.full_name/);
   const social=await read('src/app/(portal)/links/social/page.tsx');assert.match(social,/social-member-heading/);assert.match(social,/<MemberAvatar id=\{id\} name=\{name\}/);assert.match(social,/order\("last_name_key"\)/);assert.match(social,/allSocialPages/);
   const css=await read('src/app/globals.css');assert.match(css,/\.social-directory-list[^}]+max-width: 640px/);assert.match(css,/\.member-avatar[^}]+width: 36px/);assert.match(css,/min-height: 44px/);

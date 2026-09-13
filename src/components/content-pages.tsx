@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
 import { ReferenceCard } from "@/components/reference-card";
+import { NapkinPin } from "@/components/napkin-pin";
 import { RecheckReference } from "@/components/reference-controls";
 import { referenceCollection } from "@/lib/references";
 import { canAddFixtureManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
@@ -214,11 +215,11 @@ export async function ContentDetailPage({
 
   return (
     <div className="page-stack">
-      <Link className="back-link" href={backRoute}><ArrowLeft size={16} /> Back to {kind === "napkin" ? "the pile" : config.plural.toLowerCase()}</Link>
+      <Link className="back-link" href={backRoute}><ArrowLeft size={16} /> Back to {kind === "napkin" ? "the stack" : config.plural.toLowerCase()}</Link>
       {saved && <div className="notice notice--success">{saved === "filed" ? "Approved, published, and filed from its original Napkin." : "Created and ready for the next pass."}</div>}
       <section className="detail-hero">
         <div><p className="eyebrow">{getRecordMeta(kind, record)}</p><h1>{title}</h1><p>Updated {formatDate(record.updated_at)}</p></div>
-        <div className="detail-hero__actions"><StatusPill status={String(record.status)} />{mayEdit && <EditButton />}{mayArchive && <ArchiveButton kind={kind} id={id} />}{record.status === "archived" && canDeleteContent(profile.role) && <DeleteButton kind={kind} id={id} label={title} />}</div>
+        <div className="detail-hero__actions"><StatusPill status={String(record.status)} />{kind === "napkin" && mayEdit && <NapkinPin id={id} pinned={Boolean(record.pinned)} />}{mayEdit && <EditButton />}{mayArchive && <ArchiveButton kind={kind} id={id} />}{record.status === "archived" && canDeleteContent(profile.role) && <DeleteButton kind={kind} id={id} label={title} />}</div>
       </section>
 
       {tags.length > 0 && <div className="tag-list" aria-label="Tags"><Tags size={15} />{tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}

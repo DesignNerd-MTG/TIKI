@@ -23,7 +23,7 @@ function queueRecords(records: ManagedRecord[]) {
 
 export async function NapkinCapturePage() {
   const { profile } = await requireActiveProfile();
-  const action = <Link className="secondary-button" href="/napkin/pile"><Layers3 size={16} /> Pile of Napkins</Link>;
+  const action = <Link className="secondary-button" href="/napkin/pile"><Layers3 size={16} /> Stack O&apos; Napkins</Link>;
 
   return (
     <div className="page-stack">
@@ -54,13 +54,13 @@ export async function NapkinQueuePage() {
   const records = (data ?? []) as ManagedRecord[];
   const underReview = queueRecords(records.filter((record) => record.status === "needs_review"));
   const stored = queueRecords(records.filter((record) => record.status === "raw"));
-  const action = <Link className="secondary-button" href="/napkin/pile"><Layers3 size={16} /> Browse the pile</Link>;
+  const action = <Link className="secondary-button" href="/napkin/pile"><Layers3 size={16} /> Browse the stack</Link>;
 
   return (
     <div className="page-stack">
       <PageHeader
         eyebrow="Editor queue"
-        title="Napkin Queue"
+        title="Napkins to Review"
         description="Review stored notes, move useful material forward, and file organized knowledge without turning T.I.K.I. into a task list."
         action={action}
       />

@@ -394,13 +394,12 @@ describe("Supabase RLS migration", () => {
     assert.match(form, /<span>Name<\/span>[\s\S]*name="name"/);
   });
 
-  it("searches travel-profile names without exposing private travel details", async () => {
+  it("excludes private Travel profiles from global search", async () => {
     const search = await readFile(new URL("../src/app/(portal)/search/page.tsx", import.meta.url), "utf8");
     assert.match(search, /rpc\("search_fixtures"/);
     assert.match(search, /from\("shows"\)/);
     assert.match(search, /staffing_notes\.ilike/);
-    assert.match(search, /from\("travel_profiles"\)\.select\("user_id,name"\)/);
-    assert.doesNotMatch(search, /travel_profiles[\s\S]{0,120}(details|flighty_url)/i);
+    assert.doesNotMatch(search, /from\("travel_profiles"\)/);
     assert.doesNotMatch(search, /(details|flighty_url)\.ilike/i);
     assert.equal(matchesTravelProfileName("Mike Grabowski", "Mike Grabowski Travel Prefs"), true);
     assert.equal(matchesTravelProfileName("Mike Grabowski", "Mike Grabowski Travel Preferences"), true);
@@ -417,8 +416,8 @@ describe("Supabase RLS migration", () => {
     assert.doesNotMatch(editor, /Assigned to/);
     assert.match(editor, /Approve & File/);
     assert.match(editor, /Store Napkin/);
-    assert.match(navigation, /Pile of Napkins/);
-    assert.match(navigation, /Napkin Queue/);
+    assert.match(navigation, /Stack O' Napkins/);
+    assert.match(navigation, /Napkins to Review/);
     assert.match(dashboard, /Capture a Napkin/);
     assert.doesNotMatch(dashboard, /Add knowledge|href="\/fixtures\/new"/i);
   });

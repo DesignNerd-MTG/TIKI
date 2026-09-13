@@ -93,11 +93,11 @@ These redirects are used by email confirmation and password recovery. If customi
 - A new account lands on Access Pending.
 - An admin can activate that account and assign a role.
 - A viewer cannot open `/vendors` or `/admin` by typing the URL.
-- An editor can open Vendors / Clients but not Admin.
+- An editor can open Vendors / Manufacturers but not Admin.
 - An admin can manage profiles.
 - Napkin notes remain limited by their RLS policies.
 - No secrets are committed to GitHub or exposed in Netlify configuration.
 
 ## 7. Production and previews
 
-The simplest first deployment uses the existing Supabase `TIKI` project for production and previews. Before sensitive vendor/client information is entered, consider a separate staging Supabase project and Netlify context-specific environment values so preview deployments cannot affect production data.
+The simplest first deployment uses the existing Supabase `TIKI` project for production and previews. Before sensitive vendor/manufacturer information is entered, consider a separate staging Supabase project and Netlify context-specific environment values so preview deployments cannot affect production data.

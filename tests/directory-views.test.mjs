@@ -55,5 +55,5 @@ it('compact layouts are scoped to index; queries, filters and privacy gates rema
   for(const path of ['../src/app/(portal)/layout.tsx','../src/app/preview/page.tsx'])assert.match(await read(path),/requireActiveProfile\(/);
   const proxy=await read('../src/app/(portal)/links/image/route.ts');assert.match(proxy,/if \(!identity \|\| !profile\?\.active\)/);
   const signup=await read('../src/app/login/actions.ts');assert.match(signup,/redirect\("\/pending"\)/);
-  const search=await read('../src/app/(portal)/search/page.tsx');assert.match(search,/select\("user_id,name"\)/);assert.doesNotMatch(search,/select\([^\n]*travel_details/);
+  const search=await read('../src/app/(portal)/search/page.tsx');assert.doesNotMatch(search,/travel_profiles|travel_details|flighty_url/);
 });

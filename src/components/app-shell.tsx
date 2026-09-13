@@ -7,6 +7,7 @@ import {
   BookOpenText,
   Boxes,
   Building2,
+  ChevronDown,
   ChevronRight,
   ClipboardPenLine,
   Gauge,
@@ -17,9 +18,11 @@ import {
   Menu,
   Martini,
   PlaneTakeoff,
+  Pin,
   Search,
   Settings2,
   Users,
+  UserRound,
   X,
 } from "lucide-react";
 
@@ -30,20 +33,26 @@ import { Brand } from "@/components/brand";
 import { InstallTiki } from "@/components/install-tiki";
 import { version } from "../../package.json";
 
-const navigation = [
+export const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge, minimum: "viewer" },
-  { href: "/fixtures", label: "Fixtures", icon: Boxes, minimum: "viewer" },
   { href: "/shows", label: "Shows", icon: BookOpenText, minimum: "viewer" },
+  { href: "/fixtures", label: "Fixtures", icon: Boxes, minimum: "viewer" },
+  { href: "/locations", label: "Locations", icon: MapPinned, minimum: "viewer" },
+  { href: "/vendors", label: "Vendors / Manufacturers", icon: Building2, minimum: "editor" },
   { href: "/links", label: "Reference Hub", icon: Link2, minimum: "viewer" },
   { href: "/links/social", label: "Social Directory", icon: Users, minimum: "viewer" },
-  { href: "/napkin", label: "Add a Napkin", icon: ClipboardPenLine, minimum: "viewer" },
-  { href: "/napkin/pile", label: "Pile of Napkins", icon: Layers3, minimum: "viewer" },
-  { href: "/napkin/queue", label: "Napkin Queue", icon: ListChecks, minimum: "editor" },
-  { href: "/locations", label: "Locations", icon: MapPinned, minimum: "viewer" },
+  { href: "/napkin", label: "Napkins", icon: ClipboardPenLine, minimum: "viewer", group: true },
   { href: "/drinks", label: "Drinks", icon: Martini, minimum: "viewer" },
-  { href: "/travel", label: "Travel Portal", icon: PlaneTakeoff, minimum: "viewer" },
-  { href: "/vendors", label: "Vendors / Clients", icon: Building2, minimum: "editor" },
+  { href: "/account", label: "My Account", icon: UserRound, minimum: "viewer" },
+  { href: "/travel", label: "Travel Prefs", icon: PlaneTakeoff, minimum: "viewer" },
   { href: "/admin", label: "Admin", icon: Settings2, minimum: "admin" },
+] as const;
+
+export const napkinNavigation = [
+  { href: "/napkin", label: "Add a Napkin", icon: ClipboardPenLine, minimum: "viewer" },
+  { href: "/napkin/pile", label: "Stack O' Napkins", icon: Layers3, minimum: "viewer" },
+  { href: "/napkin/queue", label: "Napkins to Review", icon: ListChecks, minimum: "editor" },
+  { href: "/napkin/pinned", label: "Pinned Napkins", icon: Pin, minimum: "viewer" },
 ] as const;
 
 type AppShellProps = {
@@ -58,11 +67,16 @@ type AppShellProps = {
 export function AppShell({ children, name, email, role, profileId, avatarVersion }: AppShellProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const onNapkinRoute = pathname === "/napkin" || pathname.startsWith("/napkin/");
+  const [napkinsOpen, setNapkinsOpen] = useState(onNapkinRoute);
+  const [closedNapkinPath, setClosedNapkinPath] = useState<string | null>(null);
+  const napkinsExpanded = onNapkinRoute ? closedNapkinPath !== pathname : napkinsOpen;
   const visibleNavigation = navigation.filter((item) => hasMinimumRole(role, item.minimum));
+  const visibleNapkins = napkinNavigation.filter((item) => hasMinimumRole(role, item.minimum));
   const isActive = (href: string) => {
     if (href === "/links" && pathname === "/links/social") return false;
     if (href === "/napkin") return pathname === href;
-    if (href === "/napkin/pile") return pathname === href || (/^\/napkin\/[^/]+$/.test(pathname) && !pathname.endsWith("/queue"));
+    if (href === "/napkin/pile") return pathname === href || /^\/napkin\/[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(pathname);
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
@@ -72,8 +86,19 @@ export function AppShell({ children, name, email, role, profileId, avatarVersion
         <Brand href="/dashboard" inverse />
       </div>
       <nav className="sidebar__nav" aria-label="Portal navigation">
-        <p className="sidebar__eyebrow">Knowledge base</p>
         {visibleNavigation.map((item) => {
+          if ("group" in item && item.group) {
+            const Icon = item.icon;
+            return <div className="nav-group" key={item.href}>
+              <button type="button" className={`nav-link nav-group__toggle ${onNapkinRoute ? "nav-link--active" : ""}`} aria-expanded={napkinsExpanded} aria-controls="napkin-navigation" onClick={() => { if (onNapkinRoute) setClosedNapkinPath(napkinsExpanded ? pathname : null); else setNapkinsOpen((value) => !value); }}>
+                <Icon size={18} strokeWidth={1.8} aria-hidden="true" /><span>{item.label}</span>
+                <ChevronDown className={`nav-group__chevron ${napkinsExpanded ? "is-open" : ""}`} size={15} aria-hidden="true" />
+              </button>
+              {napkinsExpanded && <div className="nav-group__children" id="napkin-navigation">
+                {visibleNapkins.map((child) => { const ChildIcon=child.icon; const active=isActive(child.href); return <Link href={child.href} key={child.href} className={`nav-link nav-link--child ${active ? "nav-link--active" : ""}`} onClick={() => setOpen(false)}><ChildIcon size={15} strokeWidth={1.8} aria-hidden="true" /><span>{child.label}</span>{active && <ChevronRight className="nav-link__arrow" size={13} aria-hidden="true" />}</Link>; })}
+              </div>}
+            </div>;
+          }
           const active = isActive(item.href);
           const Icon = item.icon;
           return (
@@ -93,7 +118,7 @@ export function AppShell({ children, name, email, role, profileId, avatarVersion
       <div className="sidebar__footer">
         <small className="sidebar__version">T.I.K.I. v{version}</small>
         <InstallTiki />
-        <Link href="/profile" className="user-card user-card--editable" aria-label="Edit My Profile" onClick={() => setOpen(false)}>
+        <Link href="/account" className="user-card user-card--editable" aria-label="Open My Account" onClick={() => setOpen(false)}>
           <MemberAvatar id={profileId} name={name || email} version={avatarVersion} />
           <div className="user-card__copy">
             <strong>{name || email.split("@")[0]}</strong>

@@ -230,12 +230,13 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
     ],
   },
   vendor_client: {
-    kind: "vendor_client", table: "vendor_clients", route: "/vendors", singular: "Vendor / client", plural: "Vendors & clients",
-    eyebrow: "Restricted area", description: "Sensitive operational context for editors and administrators only.",
+    kind: "vendor_client", table: "vendor_clients", route: "/vendors", singular: "Vendor / manufacturer", plural: "Vendors / Manufacturers",
+    eyebrow: "Restricted directory", description: "Business and contact context for editors and administrators only.",
     minimumCreateRole: "editor", restricted: true, titleField: "name",
     fields: [
-      { name: "name", label: "Organization name", type: "text", required: true, maxLength: 160 },
-      { name: "kind", label: "Relationship", type: "select", required: true, options: [{ value: "vendor", label: "Vendor" }, { value: "client", label: "Client" }] },
+      { name: "name", label: "Organization Name", type: "text", required: true, maxLength: 160 },
+      { name: "city", label: "City", type: "text", maxLength: 120 },
+      { name: "kind", label: "Relationship", type: "select", required: true, options: [{ value: "vendor", label: "Vendor" }, { value: "manufacturer", label: "Manufacturer" }, { value: "client", label: "Client" }] },
       { name: "primary_contact", label: "Primary contact", type: "text", maxLength: 240 },
       { name: "notes", label: "Operational notes", type: "textarea", maxLength: 4000, wide: true },
     ],

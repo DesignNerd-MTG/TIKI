@@ -11,10 +11,10 @@ T.I.K.I. is the map, not the territory. It indexes existing systems such as Drop
 - Separate identity, activation, and role layers
 - Viewer, contributor, editor, and admin roles
 - Access Pending state for authenticated people who are not activated
-- Supabase Row Level Security, including the restricted Vendors / Clients area
+- Supabase Row Level Security, including the restricted Vendors / Manufacturers area
 - Dashboard with live counts, recent updates, and role-aware quick actions
 - Complete create, detail, edit, status, tag, revision, archive, and safe-delete workflows
-- Global search across permitted content, Napkin notes, vendor/client context, and tags
+- Global search across permitted content, Napkin notes, vendor/manufacturer contact context, and tags
 - T.I.K.I. Napkin capture, assignment, conversion tracking, and triage statuses
 - Admin activation and role controls with self-lockout protection
 - Admin-controlled, site-wide appearance presets with server-rendered themes

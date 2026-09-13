@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui";
 import { requireActiveProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Travel Portal" };
+export const metadata: Metadata = { title: "Travel Prefs" };
 
 export default async function TravelPage() {
   const { identity } = await requireActiveProfile();
@@ -18,7 +18,7 @@ export default async function TravelPage() {
 
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Private operational reference" title="Travel Portal" description="Keep your travel preferences together without mixing sensitive reference details into the knowledge search." />
+      <PageHeader eyebrow="Private operational reference" title="Travel Prefs" description="Keep your travel preferences together without mixing sensitive reference details into the knowledge search." />
       <div className="notice notice--neutral"><LockKeyhole size={16} /> These details are visible only to your signed-in account and are never included in global search.</div>
       {flightyUrl && <a className="travel-flighty-link" href={flightyUrl} target="_blank" rel="noreferrer"><span><strong>Open Flighty</strong>Live flight and trip information</span><ArrowUpRight size={18} /></a>}
       <section className="panel editor-panel">
