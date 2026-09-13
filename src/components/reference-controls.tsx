@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { importNotionAction, recheckReferenceAction, saveSocialLinkAction } from "@/app/(portal)/links/reference-actions";
+import { importNotionAction, recheckReferenceAction } from "@/app/(portal)/links/reference-actions";
 import type { ContentActionState } from "@/app/(portal)/content-actions";
 
 const initial: ContentActionState = { ok: false, message: "" };
@@ -20,17 +20,4 @@ export function NotionImportForm() {
     <p>Validate first. Each import saves up to 10 complete references as drafts and checks their links. Submit the same manifest again to continue; existing imports are skipped.</p>
     <div className="page-actions"><button className="secondary-button" name="mode" value="preview" disabled={pending}>Validate manifest</button><button className="primary-button" name="mode" value="import" disabled={pending}>{pending ? "Working…" : "Import next batch as drafts"}</button></div>
     {state.message && <pre className="reference-import-report" role="status">{state.message}</pre>}</form>;
-}
-
-export function SocialLinkForm({ item }: { item?: { id: string; label: string; url: string } }) {
-  const [state, action, pending] = useActionState(saveSocialLinkAction, initial);
-  const router = useRouter();
-  useEffect(() => { if (state.ok) router.refresh(); }, [state,router]);
-  return <form action={action} className="content-form">
-    {item && <input name="id" type="hidden" value={item.id} />}
-    <label className="form-field"><span>Label</span><input name="label" defaultValue={item?.label} maxLength={80} /></label>
-    <label className="form-field"><span>Public URL</span><input type="url" name="url" defaultValue={item?.url} maxLength={2048} /></label>
-    <div className="page-actions"><button className="primary-button" disabled={pending}>Save public link</button>{item && <button className="secondary-button" name="remove" value="true" disabled={pending}>Remove</button>}</div>
-    {state.message && <p role="status">{state.message}</p>}
-  </form>;
 }

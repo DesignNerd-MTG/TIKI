@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getIdentityAndProfile } from "@/lib/auth";
-import { isSafeExternalUrl, isUuid } from "@/lib/content-validation";
+import { isUuid } from "@/lib/content-validation";
 import { createClient } from "@/lib/supabase/server";
 import { checkReference } from "@/lib/reference-fetch";
 import { prepareNotionImport } from "@/lib/notion-import";
@@ -68,27 +68,4 @@ export async function importNotionAction(_state: ContentActionState, form: FormD
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "Invalid manifest." };
   }
-}
-
-export async function saveSocialLinkAction(_state: ContentActionState, form: FormData): Promise<ContentActionState> {
-  const { identity, profile } = await getIdentityAndProfile();
-  if (!identity || !profile?.active) return { ok: false, message: "Active account required." };
-  const id = String(form.get("id") ?? "");
-  const label = String(form.get("label") ?? "").trim();
-  const url = String(form.get("url") ?? "").trim();
-  if (id && !isUuid(id)) return { ok: false, message: "Invalid link." };
-  const client = await createClient();
-  if (form.get("remove") === "true" && id) {
-    const result = await client.from("profile_social_links").delete().eq("id",id).eq("profile_id",identity.id).select("id").maybeSingle();
-    if (result.error || !result.data) return { ok: false, message: "Could not remove your link." };
-  } else {
-    if (!label || label.length > 80 || !url || url.length > 2048 || !isSafeExternalUrl(url)) return { ok: false, message: "Enter a label (up to 80 characters) and a complete HTTP(S) URL." };
-    const payload = { profile_id: identity.id, label, url };
-    const result = id
-      ? await client.from("profile_social_links").update(payload).eq("id",id).eq("profile_id",identity.id).select("id").maybeSingle()
-      : await client.from("profile_social_links").insert(payload).select("id").single();
-    if (result.error || !result.data) return { ok: false, message: "Could not save your public link." };
-  }
-  revalidatePath("/links/social");
-  return { ok: true, message: "Your public links were updated." };
 }

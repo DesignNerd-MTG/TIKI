@@ -1,3 +1,9 @@
+.sidebar__version { opacity: .7; font-size: 11px; }
+.social-accounts { list-style: none; padding: 0; display: grid; gap: 18px; }
+.social-accounts li > div:first-child { display: flex; flex-wrap: wrap; gap: 12px; overflow-wrap: anywhere; }
+.social-account-controls { display: flex; flex-wrap: wrap; align-items: start; gap: 8px; margin-top: 8px; }
+.social-account-controls > p, .social-account-form { flex-basis: 100%; }
+.social-account-form { max-width: 560px; }
 .reference-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));

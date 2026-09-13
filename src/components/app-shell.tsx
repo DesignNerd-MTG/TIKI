@@ -20,6 +20,7 @@ import {
   PlaneTakeoff,
   Search,
   Settings2,
+  Users,
   X,
 } from "lucide-react";
 
@@ -28,12 +29,14 @@ import { initials } from "@/lib/format";
 import type { AppRole } from "@/lib/types";
 import { Brand } from "@/components/brand";
 import { InstallTiki } from "@/components/install-tiki";
+import { version } from "../../package.json";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge, minimum: "viewer" },
   { href: "/fixtures", label: "Fixtures", icon: Boxes, minimum: "viewer" },
   { href: "/shows", label: "Shows", icon: BookOpenText, minimum: "viewer" },
   { href: "/links", label: "Reference Hub", icon: Link2, minimum: "viewer" },
+  { href: "/links/social", label: "Social Directory", icon: Users, minimum: "viewer" },
   { href: "/documents", label: "Documents", icon: FileText, minimum: "viewer" },
   { href: "/napkin", label: "Add a Napkin", icon: ClipboardPenLine, minimum: "viewer" },
   { href: "/napkin/pile", label: "Pile of Napkins", icon: Layers3, minimum: "viewer" },
@@ -57,6 +60,7 @@ export function AppShell({ children, name, email, role }: AppShellProps) {
   const [open, setOpen] = useState(false);
   const visibleNavigation = navigation.filter((item) => hasMinimumRole(role, item.minimum));
   const isActive = (href: string) => {
+    if (href === "/links" && pathname === "/links/social") return false;
     if (href === "/napkin") return pathname === href;
     if (href === "/napkin/pile") return pathname === href || (/^\/napkin\/[^/]+$/.test(pathname) && !pathname.endsWith("/queue"));
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -87,6 +91,7 @@ export function AppShell({ children, name, email, role }: AppShellProps) {
         })}
       </nav>
       <div className="sidebar__footer">
+        <small className="sidebar__version">T.I.K.I. v{version}</small>
         <InstallTiki />
         <div className="user-card">
           <div className="avatar" aria-hidden="true">{initials(name || email)}</div>

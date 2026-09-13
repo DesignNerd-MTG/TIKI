@@ -28,7 +28,13 @@ before(async()=>{
       const result=await db.query("insert into public.link_items(label,url,category,status,created_by,created_at,updated_at) values('Legacy link','https://public.com','Drafting','published',$1,'2020-01-01T12:30:00.123456Z','2021-02-03T04:05:06.654321Z') returning id",[ids.admin]);
       legacyId=result.rows[0].id;
     }
-    if(name==="202609130002_ldg_documents_collection.sql"){
+    if(name==="202609140001_social_account_admin.sql"){
+      await db.query("insert into public.profile_social_links(profile_id,label,url) values($1,'Ambiguous legacy','https://example.com/legacy')",[ids.viewer]);
+      const old=(await db.query("select * from public.profile_social_links")).rows;
+      await db.exec(await readFile(new URL(name,directory),"utf8"));
+      assert.deepEqual((await db.query("select * from public.profile_social_links")).rows,old);
+      await db.query("delete from public.profile_social_links where id=$1",[old[0].id]);
+    }else if(name==="202609130002_ldg_documents_collection.sql"){
       const taxonomy=(await db.query("select * from public.reference_collections order by id")).rows;
       const links=(await db.query("select * from public.link_items order by id")).rows;
       await db.exec(await readFile(new URL(name,directory),"utf8"));
@@ -117,7 +123,7 @@ describe("Reference PostgreSQL migration and RLS",()=>{
     await as("editor");
     await assert.rejects(()=>db.query("select * from public.import_notion_references($1)",[JSON.stringify(manifest)]));
   });
-  it("restricts social link mutations to the owning active profile and exposes only public identity",async()=>{
+  it("restricts non-admin social mutations to the owning active profile and exposes only public identity",async()=>{
     await as("viewer");
     await db.query("insert into public.profile_social_links(profile_id,label,url) values($1,'Portfolio','https://public.com')",[ids.viewer]);
     await assert.rejects(()=>db.query("insert into public.profile_social_links(profile_id,label,url) values($1,'Impersonation','https://public.com')",[ids.admin]));
@@ -140,5 +146,32 @@ describe("Reference PostgreSQL migration and RLS",()=>{
     const results=(await db.query("select * from public.import_notion_references($1)",[JSON.stringify(batch)])).rows;
     assert.deepEqual(results.map(r=>r.outcome),["imported","imported"]);
     assert.equal((await db.query("select link_health from public.link_items where import_source=$1",[batch[1].import_source])).rows[0].link_health,"could_not_verify");
+  });
+  it("allows repeated platforms, owner CRUD and admin CRUD for active members without exposing private fields",async()=>{
+    await as("viewer");
+    const created=[];
+    for(const label of ["Instagram","TikTok","Personal Website"])for(let i=0;i<2;i++){
+      created.push((await db.query("insert into public.profile_social_links(profile_id,label,url) values($1,$2,$3) returning id",[ids.viewer,label,`https://example.com/${label.replaceAll(' ','')}/${i}`])).rows[0].id);
+    }
+    assert.equal(created.length,6);
+    assert.equal((await db.query("update public.profile_social_links set label='Owner edit' where id=$1 returning id",[created[0]])).rows.length,1);
+    assert.equal((await db.query("delete from public.profile_social_links where id=$1 returning id",[created[0]])).rows.length,1);
+    assert.equal((await db.query("select * from public.social_account_targets()")).rows.length,0);
+    await as("contributor");
+    assert.equal((await db.query("delete from public.profile_social_links where id=$1 returning id",[created[1]])).rows.length,0);
+    assert.equal((await db.query("update public.profile_social_links set label='No' where id=$1 returning id",[created[1]])).rows.length,0);
+    assert.equal((await db.query("select * from public.profiles where id=$1",[ids.viewer])).rows.length,0);
+    await as("admin");
+    const targets=(await db.query("select * from public.social_account_targets()")).rows;
+    assert.equal(targets.length,4);assert.deepEqual(Object.keys(targets[0]).sort(),["display_name","profile_id"]);
+    assert.ok(!targets.some(row=>row.profile_id===ids.pending));
+    const added=(await db.query("insert into public.profile_social_links(profile_id,label,url) values($1,'Instagram','https://www.instagram.com/adminadded/') returning id",[ids.viewer])).rows[0].id;
+    assert.equal((await db.query("update public.profile_social_links set url='https://www.instagram.com/corrected/' where id=$1 returning id",[added])).rows.length,1);
+    assert.equal((await db.query("delete from public.profile_social_links where id=$1 returning id",[added])).rows.length,1);
+    await assert.rejects(()=>db.query("insert into public.profile_social_links(profile_id,label,url) values($1,'Instagram','https://example.com')",[ids.pending]));
+    assert.equal((await db.query("select * from public.profile_social_links where id=any($1::uuid[])",[created.slice(1)])).rows.length,5);
+    await as("pending");
+    await assert.rejects(()=>db.query("insert into public.profile_social_links(profile_id,label,url) values($1,'Instagram','https://example.com')",[ids.pending]));
+    assert.equal((await db.query("select * from public.social_directory()")).rows.length,0);
   });
 });
