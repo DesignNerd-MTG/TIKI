@@ -90,7 +90,9 @@ describe("content validation and failure handling", () => {
     assert.equal(newRecord.valid, false);
     if (!newRecord.valid) assert.match(newRecord.fieldErrors.fixture_type, /listed fixture type/i);
     assert.equal(validateContentInput("fixture", "contributor", input, "draft", { fixture_type: "Batten" }).valid, true);
-    assert.equal(fixtureTypeOptions.length, 23);
+    assert.equal(fixtureTypeOptions.length, 24);
+    assert.ok(fixtureTypeOptions.some((option) => option.value === "Battens & Tubes"));
+    assert.equal(fixtureTypeOptions.some((option) => option.value === "Wash Bricks"), false);
     assert.ok(fixtureTypeOptions.some((option) => option.value === "LED Strobe/Blinder"));
     assert.ok(fixtureTypeOptions.some((option) => option.value === "LED-Punch Light"));
     assert.ok(fixtureTypeOptions.some((option) => option.value === "Conventional Strobe/Blinder"));
@@ -238,7 +240,7 @@ describe("tags, search, and record presentation", () => {
     assert.match(pages, />Type<\/Link>/);
     assert.match(pages, />Fixture name<\/Link>/);
     assert.match(editor, /existing value/);
-    assert.match(search, /fixture_type\.ilike/);
+    assert.match(search, /rpc\("search_fixtures"/);
     assert.match(sql, /add column if not exists ies_url text/i);
     assert.match(sql, /create index if not exists fixtures_type_name_idx/i);
     assert.deepEqual(fixtureFields.find((field) => field.name === "power_input_connector")?.options?.slice(1), fixturePowerInputOptions);
@@ -394,7 +396,7 @@ describe("Supabase RLS migration", () => {
 
   it("searches travel-profile names without exposing private travel details", async () => {
     const search = await readFile(new URL("../src/app/(portal)/search/page.tsx", import.meta.url), "utf8");
-    assert.match(search, /from\("fixtures"\)/);
+    assert.match(search, /rpc\("search_fixtures"/);
     assert.match(search, /from\("shows"\)/);
     assert.match(search, /staffing_notes\.ilike/);
     assert.match(search, /from\("travel_profiles"\)\.select\("user_id,name"\)/);

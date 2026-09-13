@@ -15,6 +15,7 @@ import type { EntityKind, ManagedRecord } from "@/lib/types";
 import { ReferenceCard } from "@/components/reference-card";
 import { RecheckReference } from "@/components/reference-controls";
 import { referenceCollection } from "@/lib/references";
+import { canAddFixtureManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
 
 function stringify(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -154,12 +155,17 @@ export async function ContentIndexPage({
 
 export async function ContentCreatePage({ kind }: { kind: EntityKind }) {
   const config = contentConfigs[kind];
-  const { profile } = await requireActiveProfile(config.minimumCreateRole);
+  const [{ profile }, supabase] = await Promise.all([requireActiveProfile(config.minimumCreateRole), createClient()]);
+  const manufacturerResult = kind === "fixture"
+    ? await supabase.from("fixture_manufacturers").select("id,name,slug,active,aliases").eq("active", true).order("name")
+    : { data: [], error: null };
+  const manufacturers = (manufacturerResult.data ?? []) as FixtureManufacturer[];
   return (
     <div className="page-stack">
       <Link className="back-link" href={config.route}><ArrowLeft size={16} /> Back to {config.plural.toLowerCase()}</Link>
       <PageHeader eyebrow="New record" title={`Add ${config.singular.toLowerCase()}`} description={profile.role === "admin" ? "Administrator entries publish immediately unless you choose another status." : "Start with what is known. Drafts can be refined and submitted for review later."} />
-      <section className="panel editor-panel"><ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} /></section>
+      {manufacturerResult.error && <div className="notice notice--error">The manufacturer list could not be loaded. Refresh before creating this Fixture.</div>}
+      <section className="panel editor-panel"><ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} /></section>
     </div>
   );
 }
@@ -181,14 +187,18 @@ export async function ContentDetailPage({
   const result = await supabase.from(config.table).select("*").eq("id", id).maybeSingle();
   if (!result.data) notFound();
   const record = result.data as ManagedRecord;
-  const [tags, revisionsResult, additionalLinksResult] = await Promise.all([
+  const [tags, revisionsResult, additionalLinksResult, manufacturerResult] = await Promise.all([
     getTags(kind, id),
     supabase.from("revision_notes").select("id,summary,source,created_at").eq("entity_kind", kind).eq("entity_id", id).order("created_at", { ascending: false }).limit(30),
     sectionsForKind(kind).length
       ? supabase.from("additional_links").select("id,section,label,url,position").eq("entity_kind", kind).eq("entity_id", id).order("position", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
+    kind === "fixture"
+      ? supabase.from("fixture_manufacturers").select("id,name,slug,active,aliases").order("name")
+      : Promise.resolve({ data: [], error: null }),
   ]);
   const additionalLinks = (additionalLinksResult.data ?? []) as AdditionalLink[];
+  const manufacturers = (manufacturerResult.data ?? []) as FixtureManufacturer[];
   const mayEdit = canEditContent(profile.role, identity.id, kind, record);
   const mayArchive = record.status !== "archived" && canArchiveContent(profile.role, identity.id, kind, record);
   const title = getRecordTitle(kind, record);
@@ -245,7 +255,8 @@ export async function ContentDetailPage({
       {mayEdit ? (
         <section className="panel editor-panel" id="edit-record">
           <div className="panel__heading"><div><p className="eyebrow">Role-aware controls</p><h2>Edit {config.singular.toLowerCase()}</h2></div></div>
-          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} additionalLinks={additionalLinks} adminCanPublishWithoutRevision={profile.role === "admin"} />
+          {manufacturerResult.error && <div className="notice notice--error">The manufacturer list could not be loaded. Refresh before editing this Fixture.</div>}
+          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} additionalLinks={additionalLinks} adminCanPublishWithoutRevision={profile.role === "admin"} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} />
         </section>
       ) : (
         <div className="notice notice--neutral">This record is read-only for your current role.</div>

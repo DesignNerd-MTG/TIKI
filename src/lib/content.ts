@@ -13,6 +13,7 @@ export const fixtureTypeOptions = [
   "Mover Strip",
   "Mover FX",
   "Gimmick/FX Light",
+  "Battens & Tubes",
   "LED Striplight",
   "LED Leko",
   "LED Fresnel",
@@ -116,7 +117,7 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
     minimumCreateRole: "contributor", titleField: "name",
     fields: [
       { name: "name", label: "Fixture name", type: "text", required: true, maxLength: 160 },
-      { name: "manufacturer", label: "Manufacturer", type: "text", maxLength: 120 },
+      { name: "manufacturer", label: "Manufacturer", type: "text", required: true, maxLength: 120, help: "Choose the canonical manufacturer; aliases are searchable." },
       { name: "fixture_type", label: "Fixture type", type: "select", required: true, options: [
         { value: "", label: "Choose a fixture type" },
         ...fixtureTypeOptions,

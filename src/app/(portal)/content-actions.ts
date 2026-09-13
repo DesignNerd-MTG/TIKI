@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { contentConfigs, filingDestinationKinds, type FilingDestinationKind } from "@/lib/content";
+import { hasMinimumRole } from "@/lib/access";
 import { readAdditionalLinks, sectionsForKind, type AdditionalLink } from "@/lib/additional-links";
 import { canArchiveContent, canCreateContent, canDeleteContent, canEditContent } from "@/lib/content-rules";
 import { isUuid, validateContentInput, type ContentInput } from "@/lib/content-validation";
@@ -11,12 +12,21 @@ import { getIdentityAndProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
 import { checkReference } from "@/lib/reference-fetch";
+import { findSimilarManufacturers, slugifyManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
 
 export type ContentActionState = {
   ok: boolean;
   message: string;
   fieldErrors?: Record<string, string>;
   redirectTo?: string;
+};
+
+export type ManufacturerActionState = {
+  ok: boolean;
+  message: string;
+  manufacturer?: FixtureManufacturer;
+  candidates?: FixtureManufacturer[];
+  fieldErrors?: Record<string, string>;
 };
 
 function isEntityKind(value: string): value is EntityKind {
@@ -56,6 +66,46 @@ async function syncAdditionalLinks(supabase: Awaited<ReturnType<typeof createCli
   return result.error?.message ?? null;
 }
 
+export async function addFixtureManufacturerAction(formData: FormData): Promise<ManufacturerActionState> {
+  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ");
+  const aliasInput = String(formData.get("aliases") ?? "");
+  const aliases = [...new Map(aliasInput.split(",").map((value) => value.trim().replace(/\s+/g, " ")).filter(Boolean).map((value) => [value.toLocaleLowerCase(), value])).values()].slice(0, 12);
+  const fieldErrors: Record<string, string> = {};
+  if (name.length < 2) fieldErrors.name = "Enter a manufacturer name.";
+  else if (name.length > 120) fieldErrors.name = "Keep the manufacturer name to 120 characters or fewer.";
+  if (aliases.some((alias) => alias.length > 120)) fieldErrors.aliases = "Keep every alias to 120 characters or fewer.";
+  if (Object.keys(fieldErrors).length) return { ok: false, message: "Check the manufacturer details and try again.", fieldErrors };
+
+  const { identity, profile } = await getIdentityAndProfile();
+  if (!identity || !profile?.active) return { ok: false, message: "Your session is no longer active. Sign in again." };
+  if (!hasMinimumRole(profile.role, "editor")) return { ok: false, message: "Only Editors and Admins can add manufacturers." };
+
+  const supabase = await createClient();
+  const existingResult = await supabase.from("fixture_manufacturers").select("id,name,slug,active,aliases").order("name").limit(500);
+  if (existingResult.error) return { ok: false, message: `Manufacturers could not be checked. ${existingResult.error.message}` };
+  const manufacturers = (existingResult.data ?? []) as FixtureManufacturer[];
+  const candidates = findSimilarManufacturers(name, manufacturers);
+  if (candidates.length) return { ok: false, message: "Similar manufacturers already exist. Choose one of them instead, or use a more distinct canonical name.", candidates };
+
+  for (const alias of aliases) {
+    const aliasCandidates = findSimilarManufacturers(alias, manufacturers);
+    if (aliasCandidates.length) return { ok: false, message: `The alias “${alias}” already points to, or closely matches, an existing manufacturer.`, candidates: aliasCandidates };
+  }
+
+  const slug = slugifyManufacturer(name);
+  if (!slug) return { ok: false, message: "Enter a manufacturer name containing letters or numbers.", fieldErrors: { name: "Use a recognizable manufacturer name." } };
+  const result = await supabase.from("fixture_manufacturers").insert({ name, slug, aliases, created_by: identity.id }).select("id,name,slug,active,aliases").single();
+  if (result.error || !result.data) {
+    const detail = result.error?.message ?? "Try again.";
+    const duplicate = /similar manufacturers|duplicate|unique|conflicts with/i.test(detail);
+    return { ok: false, message: duplicate ? "A matching or very similar manufacturer already exists. Refresh the choices and select it." : `The manufacturer could not be added. ${detail}` };
+  }
+
+  revalidatePath("/fixtures");
+  revalidatePath("/fixtures/new");
+  return { ok: true, message: `${result.data.name} added and selected.`, manufacturer: result.data as FixtureManufacturer };
+}
+
 export async function saveContentAction(_previous: ContentActionState, formData: FormData): Promise<ContentActionState> {
   const kindValue = String(formData.get("_entity_kind") ?? "");
   if (!isEntityKind(kindValue)) return { ok: false, message: "Unknown content type." };
@@ -88,6 +138,22 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   if (!additionalLinks.valid) return { ok: false, message: "Check the additional links and try again.", fieldErrors: { additional_links: additionalLinks.message } };
 
   const payload: Record<string, unknown> = { ...validation.payload };
+  if (kind === "fixture") {
+    const manufacturerId = String(formData.get("manufacturer_id") ?? "").trim();
+    const unchangedUnresolved = Boolean(existing && !existing.manufacturer_id && String(existing.manufacturer ?? "") === String(payload.manufacturer ?? ""));
+    if (!manufacturerId && !unchangedUnresolved) {
+      return { ok: false, message: "Choose a canonical manufacturer.", fieldErrors: { manufacturer: "Search for and choose a listed manufacturer." } };
+    }
+    if (manufacturerId) {
+      if (!isUuid(manufacturerId)) return { ok: false, message: "Choose a canonical manufacturer.", fieldErrors: { manufacturer: "That manufacturer choice is invalid." } };
+      const manufacturerResult = await supabase.from("fixture_manufacturers").select("id,name").eq("id", manufacturerId).eq("active", true).maybeSingle();
+      if (manufacturerResult.error || !manufacturerResult.data) return { ok: false, message: "Choose an active canonical manufacturer.", fieldErrors: { manufacturer: "That manufacturer is unavailable. Refresh and choose again." } };
+      payload.manufacturer_id = manufacturerResult.data.id;
+      payload.manufacturer = manufacturerResult.data.name;
+    } else {
+      payload.manufacturer_id = null;
+    }
+  }
   if (kind === "link") Object.assign(payload, await checkReference(String(payload.url)));
   if (!existing) payload.created_by = identity.id;
   if (kind === "napkin" && String(payload.status) === "converted" && existing?.status !== "converted") {

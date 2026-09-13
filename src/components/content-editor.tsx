@@ -10,6 +10,8 @@ import { sectionsForKind, type AdditionalLink, type AdditionalLinkSection } from
 import { contentConfigs, filingDestinationKinds, getStatusLabel } from "@/lib/content";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
 import { referenceCollection } from "@/lib/references";
+import { ManufacturerSelector } from "@/components/manufacturer-selector";
+import type { FixtureManufacturer } from "@/lib/fixture-manufacturers";
 
 function SubmitButton({ create, label }: { create: boolean; label?: string }) {
   const { pending } = useFormStatus();
@@ -86,6 +88,8 @@ export function ContentEditor({
   defaultStatus,
   additionalLinks = [],
   adminCanPublishWithoutRevision = false,
+  manufacturers = [],
+  canAddManufacturer = false,
 }: {
   kind: EntityKind;
   record?: ManagedRecord | null;
@@ -94,6 +98,8 @@ export function ContentEditor({
   defaultStatus?: string;
   additionalLinks?: AdditionalLink[];
   adminCanPublishWithoutRevision?: boolean;
+  manufacturers?: FixtureManufacturer[];
+  canAddManufacturer?: boolean;
 }) {
   const config = contentConfigs[kind];
   const [collection, setCollection] = useState(String(record?.collection_id ?? "unsorted"));
@@ -116,6 +122,9 @@ export function ContentEditor({
         {config.fields.map((field, index) => {
           const error = state.fieldErrors?.[field.name];
           const value = record?.[field.name];
+          if (kind === "fixture" && field.name === "manufacturer") {
+            return <ManufacturerSelector key={field.name} manufacturers={manufacturers} initialId={typeof record?.manufacturer_id === "string" ? record.manufacturer_id : ""} initialName={typeof value === "string" ? value : ""} canAdd={canAddManufacturer} error={error} />;
+          }
           const className = field.wide ? "form-field form-field--wide" : "form-field";
           const selectOptions = field.options ?? [];
           const existingSelectValue = typeof value === "string" ? value : "";
