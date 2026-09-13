@@ -1,5 +1,15 @@
 # Directory names, Reference views, and private-portal follow-up
 
+## Width and last-name sorting addendum (supersedes full-name ordering below)
+
+The Social member list alone now has width:100%, max-width:640px and left alignment. Existing 600px stacking and 44px touch targets remain; Reference Hub widths are unchanged.
+
+Profiles have full_name only, no last_name/family_name. Member order uses its final whitespace-delimited token (single names use themselves), case-insensitive, then full name case-insensitive, then profile UUID. Displayed names and account sorting are unchanged; missing names retain the emergency fallback.
+
+New forward migration `202609140006_social_directory_last_name.sql` adds `social_directory_index()`, a SECURITY INVOKER wrapper over the existing active-member-only directory. It returns the same public fields plus two derived lowercase sort keys, no private fields. Execution is authenticated/owner only, with anon/PUBLIC/service_role revoked. Existing RPCs, grants, policies, stored data and profile schema are untouched. This migration has NOT been applied to production.
+
+PostgREST orders by last_name_key, display_name_key, profile_id and account id before each range request. The complete paged result is grouped preserving database member order; account sorting is unchanged. This avoids sorting only a truncated page. Disposable PostgreSQL tests verify two-row pages across last-name/full-name/UUID ties, viewer/Admin consistency and anonymous/pending denial. The new migration and visual review are required before deploying this branch.
+
 ## Social density addendum
 
 Member groups use compact bordered list rows (12px/16px padding), with the name as heading and platform/account/control columns. Controls retain 44px touch targets and wrap below accounts on narrow screens. Editing expands only the existing per-account form; Add another account remains collapsed. The shared-name form is now a native collapsed disclosure. No normalization, ownership predicate, SQL policy, or stored data change.

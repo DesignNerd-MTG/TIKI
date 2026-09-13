@@ -11,10 +11,10 @@ export const metadata = { title:"Social Directory" };
 export default async function SocialDirectory() {
   const { identity,profile } = await requireActiveProfile();
   const client = await createClient();
-  const { data, error } = await allSocialPages<SocialAccount>((from,to) => client.rpc("social_directory").order("profile_id").order("id").range(from,to));
+  const { data, error } = await allSocialPages<SocialAccount>((from,to) => client.rpc("social_directory_index").order("last_name_key").order("display_name_key").order("profile_id").order("id").range(from,to));
   const targets = profile.role === "admin" ? await allSocialPages<{profile_id:string;display_name:string}>((from,to) => client.rpc("social_account_targets").order("profile_id").range(from,to)) : null;
   const rows = (data ?? []) as SocialAccount[];
-  const people = groupSocialAccounts(rows);
+  const people = groupSocialAccounts(rows, true);
   return <div className="page-stack">
     <PageHeader eyebrow="People & credits" title="Social Directory" description="Find accounts for tagging and credits. Active members manage their own accounts; admins can help any active member." />
     {error || targets?.error ? <DatabaseNotice /> : <>

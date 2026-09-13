@@ -48,6 +48,32 @@ before(async()=>{
 });
 after(async()=>{await db.close();});
 describe("Reference PostgreSQL migration and RLS",()=>{
+  it("orders last-name keys before directory page limits with active-only public fields",async()=>{
+    await db.exec('reset role');
+    const names=['Romi Smith','Sarah Lynn Jakubasz','Mike Grabowski','Jane Adams','zoe adams','jane ADAMS','Prince'];
+    const people=names.map((_,i)=>`77777777-7777-4777-8777-${String(i).padStart(12,'0')}`);
+    for(let i=0;i<names.length;i++) {
+      await db.query("insert into auth.users(id,email) values($1,$2)",[people[i],`sort${i}@test.invalid`]);
+      await db.query("update public.profiles set full_name=$1,active=true where id=$2",[names[i],people[i]]);
+      await db.query("insert into public.profile_social_links(profile_id,label,url) values($1,'Instagram','https://instagram.com/test')",[people[i]]);
+    }
+    const expected=[3,5,4,2,1,6,0].map(i=>people[i]);
+    for(const actor of ['viewer','admin']) {
+      await as(actor);
+      const fetched=[];
+      for(let offset=0;offset<names.length;offset+=2) {
+        const rows=(await db.query('select * from public.social_directory_index() order by last_name_key,display_name_key,profile_id,id limit 2 offset $1',[offset])).rows;
+        fetched.push(...rows.map(r=>r.profile_id));
+        assert.deepEqual(Object.keys(rows[0]).sort(),['display_name','display_name_key','id','label','last_name_key','profile_id','url']);
+      }
+      assert.deepEqual(fetched,expected);
+    }
+    await as('pending');assert.equal((await db.query('select * from public.social_directory_index()')).rows.length,0);
+    await db.exec('reset role; set role anon');
+    await assert.rejects(()=>db.query('select * from public.social_directory_index()'),e=>e.code==='42501');
+    await db.exec('reset role');
+    await db.query('delete from auth.users where id=any($1::uuid[])',[people]);
+  });
   it("sorts the full filtered Reference index before paging with historical dates and stable ties",async()=>{
     await as('admin');
     const rows=[];
