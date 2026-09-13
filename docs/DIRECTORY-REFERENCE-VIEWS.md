@@ -1,5 +1,13 @@
 # Directory names, Reference views, and private-portal follow-up
 
+## Social density addendum
+
+Member groups use compact bordered list rows (12px/16px padding), with the name as heading and platform/account/control columns. Controls retain 44px touch targets and wrap below accounts on narrow screens. Editing expands only the existing per-account form; Add another account remains collapsed. The shared-name form is now a native collapsed disclosure. No normalization, ownership predicate, SQL policy, or stored data change.
+
+Although social_directory() has no SQL LIMIT, PostgREST can cap RPC responses. Both directory accounts and Admin targets now load stable pages ordered by profile UUID/account UUID before existing name/platform sorting. Short pages continue until an empty page, accommodating lower API caps. A page error returns no partial directory. Tests cover 1,205 accounts under a simulated 73-row API cap, complete grouping, failure handling, compact responsive structure and unchanged ownership controls. No new migration is required for this addendum.
+
+Rollout remains paused by Netlify account credits. Density changes are on the retained feature branch and should be visually reviewed before the next production release.
+
 ## Reference sorting addendum
 
 `202609140005_reference_index_sort.sql` adds a separate SECURITY INVOKER index RPC, explicitly authenticated-only, leaving global search's existing RPC unchanged. Filtering and search predicates are preserved; ordering happens before the 51-row pagination window. Title sorts use trimmed lowercase titles then UUID; date sorts use only date_added, then title/UUID. NULL dates sort last. Unknown sort values fall back to Title A–Z.
