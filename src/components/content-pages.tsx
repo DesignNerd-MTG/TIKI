@@ -18,8 +18,9 @@ import { RecheckReference } from "@/components/reference-controls";
 import { referenceCollection, type ReferenceCollectionRow } from "@/lib/references";
 import { canAddFixtureManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
 import { FixtureCreate } from "@/components/fixture-create";
-import { fixtureQuickSpecs, formatFixtureWeight } from "@/lib/fixture-physical";
+import { fixtureQuickSpecs, formatFixtureWattage, formatFixtureWeight } from "@/lib/fixture-physical";
 import { NapkinSketch } from "@/components/napkin-sketch";
+import { ShareRecord } from "@/components/share-record";
 
 function stringify(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -157,7 +158,7 @@ export async function ContentIndexPage({
   );
 }
 
-export async function ContentCreatePage({ kind }: { kind: EntityKind }) {
+export async function ContentCreatePage({ kind, initialValues }: { kind: EntityKind; initialValues?: Record<string, string | number | null> }) {
   const config = contentConfigs[kind];
   const [{ profile }, supabase] = await Promise.all([requireActiveProfile(config.minimumCreateRole), createClient()]);
   const manufacturerResult = kind === "fixture"
@@ -169,7 +170,7 @@ export async function ContentCreatePage({ kind }: { kind: EntityKind }) {
       <Link className="back-link" href={config.route}><ArrowLeft size={16} /> Back to {config.plural.toLowerCase()}</Link>
       <PageHeader eyebrow="New record" title={`Add ${config.singular.toLowerCase()}`} description={profile.role === "admin" ? "Administrator entries publish immediately unless you choose another status." : "Start with what is known. Drafts can be refined and submitted for review later."} />
       {manufacturerResult.error && <div className="notice notice--error">The manufacturer list could not be loaded. Refresh before creating this Fixture.</div>}
-      <section className="panel editor-panel">{kind === "fixture" ? <FixtureCreate statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} /> : <ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} />}</section>
+      <section className="panel editor-panel">{kind === "fixture" ? <FixtureCreate statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} /> : <ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} initialValues={initialValues} />}</section>
     </div>
   );
 }
@@ -221,7 +222,7 @@ export async function ContentDetailPage({
       {saved && <div className="notice notice--success">{saved === "filed" ? "Approved, published, and filed from its original Napkin." : "Created and ready for the next pass."}</div>}
       <section className="detail-hero">
         <div><p className="eyebrow">{getRecordMeta(kind, record)}</p><h1>{title}</h1><p>Updated {formatDate(record.updated_at)}</p></div>
-        <div className="detail-hero__actions"><StatusPill status={String(record.status)} />{kind === "napkin" && mayEdit && <NapkinPin id={id} pinned={Boolean(record.pinned)} />}{mayEdit && <EditButton />}{mayArchive && <ArchiveButton kind={kind} id={id} />}{record.status === "archived" && canDeleteContent(profile.role) && <DeleteButton kind={kind} id={id} label={title} />}</div>
+        <div className="detail-hero__actions"><StatusPill status={String(record.status)} /><ShareRecord title={title} />{kind === "napkin" && mayEdit && <NapkinPin id={id} pinned={Boolean(record.pinned)} />}{mayEdit && <EditButton />}{mayArchive && <ArchiveButton kind={kind} id={id} />}{record.status === "archived" && canDeleteContent(profile.role) && <DeleteButton kind={kind} id={id} label={title} />}</div>
       </section>
 
       {tags.length > 0 && <div className="tag-list" aria-label="Tags"><Tags size={15} />{tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
@@ -238,7 +239,7 @@ export async function ContentDetailPage({
           {kind === "fixture" && <section aria-label="Fixture quick specs">
             <p className="eyebrow">Quick specs</p>
             <dl className="detail-definition-list">
-              {fixtureQuickSpecs.map((key) => <div key={key}><dt>{config.fields.find((field) => field.name === key)?.label}</dt><dd>{key === "weight_lb" ? formatFixtureWeight(stringify(record[key])) : stringify(record[key]) || "Not specified"}</dd></div>)}
+              {fixtureQuickSpecs.map((key) => <div key={key}><dt>{config.fields.find((field) => field.name === key)?.label}</dt><dd>{key === "weight_lb" ? formatFixtureWeight(stringify(record[key])) : key === "wattage" ? formatFixtureWattage(stringify(record[key])) : stringify(record[key]) || "Not specified"}</dd></div>)}
             </dl>
           </section>}
           <div className="panel__heading"><div><p className="eyebrow">Record details</p><h2>What the team should know</h2></div></div>

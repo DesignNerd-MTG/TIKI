@@ -30,19 +30,20 @@ export function VendorEditor({ record }: { record?: VendorDirectoryRecord }) {
     <section className="vendor-contacts-editor">
       <div className="panel__heading"><div><p className="eyebrow">People</p><h2>Contacts</h2></div><button className="secondary-button" type="button" onClick={() => setContacts((current) => [...current, editable(undefined, current.length)])}><Plus size={16} /> Add Contact</button></div>
       {!contacts.length && <p className="compact-empty">No contacts. Organizations can be saved without one.</p>}
+      {contacts.length > 0 && primaryIndex < 0 && <p className="notice notice--neutral vendor-primary-notice">No primary contact selected.</p>}
       {contacts.map((contact, index) => <fieldset className="vendor-contact-row" key={contact.key}>
-        <legend>{contact.is_primary ? "Primary Contact" : "Additional Contact"}</legend>
+        <legend>Contact</legend>
         <input type="hidden" name="contact_id" value={contact.id ?? ""} />
         <label className="form-field"><span>Name</span><input name="contact_name" required maxLength={160} value={contact.name} onChange={(event) => update(index,{name:event.target.value})} aria-invalid={Boolean(state.fieldErrors?.[`contact_${index}`])} /></label>
         <label className="form-field"><span>Title</span><input name="contact_title" maxLength={160} value={contact.title ?? ""} onChange={(event) => update(index,{title:event.target.value})} /></label>
         <label className="form-field"><span>Email</span><input name="contact_email" type="email" maxLength={254} value={contact.email ?? ""} onChange={(event) => update(index,{email:event.target.value})} /></label>
         <label className="form-field"><span>Cell</span><input name="contact_cell" type="tel" maxLength={100} value={contact.cell ?? ""} onChange={(event) => update(index,{cell:event.target.value})} /></label>
-        <div className="vendor-contact-row__actions">{!contact.is_primary && <button className="text-button" type="button" onClick={() => makePrimary(index)}>Make Primary</button>}<button className="icon-button" type="button" aria-label={`Remove ${contact.name || "contact"}`} onClick={() => setContacts((current) => current.filter((_, position) => position !== index))}><Trash2 size={16} /></button></div>
+        <div className="vendor-contact-row__actions">{contact.is_primary ? <span className="primary-contact-badge">Primary</span> : <button className="secondary-button vendor-make-primary" type="button" onClick={() => makePrimary(index)}>Make Primary</button>}<button className="icon-button" type="button" aria-label={`Remove ${contact.name || "contact"}`} onClick={() => setContacts((current) => current.filter((_, position) => position !== index))}><Trash2 size={16} /></button></div>
       </fieldset>)}
       <input type="hidden" name="primary_index" value={primaryIndex} />
       {primaryIndex >= 0 && <button className="text-button" type="button" onClick={() => setContacts((current) => current.map((contact) => ({...contact,is_primary:false})))}>Clear Primary Contact</button>}
     </section>
     {state.message && <div className="notice notice--error" role="status">{state.message}</div>}
-    <button className="primary-button vendor-form__save" type="submit" disabled={pending}>{pending ? "Saving…" : record ? "Save organization" : "Add organization"}</button>
+    <div className="content-form__actions content-form__actions--sticky vendor-form__actions"><button className="primary-button vendor-form__save" type="submit" disabled={pending}>{pending ? "Saving…" : record ? "Save organization" : "Add organization"}</button></div>
   </form>;
 }

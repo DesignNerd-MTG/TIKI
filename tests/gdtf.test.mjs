@@ -20,6 +20,16 @@ describe("Safe GDTF review", () => {
     assert.ok(Math.abs(review.weightLb - kilogramsToPounds(24.3)) < 1e-9);
     assert.equal(gdtfPrefill(review, manufacturers, "").manufacturer_id, "hes");
   });
+  it("imports only one explicit reliable power-consumption value as wattage", async () => {
+    const explicit = await parse(gdtfXml('<PhysicalDescriptions><Properties><PowerConsumption Value="1200.5" Connector="PowerCON"/></Properties></PhysicalDescriptions>'));
+    assert.equal(explicit.wattage, 1200.5);
+    assert.equal(gdtfPrefill(explicit, manufacturers, "").wattage, 1200.5);
+    for (const body of [
+      '<PhysicalDescriptions><Properties><PowerConsumption Value="0"/></Properties></PhysicalDescriptions>',
+      '<PhysicalDescriptions><Properties><PowerConsumption Value="500"/><PowerConsumption Value="600"/></Properties></PhysicalDescriptions>',
+      '<Geometries><Geometry PowerConsumption="900"/></Geometries>',
+    ]) assert.equal((await parse(gdtfXml(body))).wattage, null);
+  });
   it("computes sparse/coarse/fine addresses rather than counting logical/channel nodes", async () => {
     const review = await parse(gdtfXml(`<DMXModes>${modeXml("Basic", channelXml("1,2") + channelXml("10") + channelXml("None"))}${modeXml("Extended", channelXml("3,4,5,6") + channelXml("49"))}</DMXModes>`));
     assert.deepEqual(review.modes.map((mode) => [mode.name, mode.footprint]), [["Basic", 10], ["Extended", 49]]);

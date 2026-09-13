@@ -30,22 +30,26 @@ describe("corrective palette, Napkin sketch, and release behavior", () => {
     await assert.rejects(() => normalizeNapkinSketch(source, "image/jpeg"), /must be a PNG/);
   });
 
-  it("wires all three palette actions, six editable tokens, live preview, and fallback", async () => {
-    const [component, action, account, layout] = await Promise.all([
+  it("wires three admin-managed site palette slots, six editable tokens, preview, and fallback", async () => {
+    const [component, action, admin, account, layout] = await Promise.all([
       read("src/components/custom-palettes.tsx"),
-      read("src/app/(portal)/account/appearance-actions.ts"),
+      read("src/app/(portal)/admin/palette-actions.ts"),
+      read("src/app/(portal)/admin/page.tsx"),
       read("src/app/(portal)/account/page.tsx"),
       read("src/app/(portal)/layout.tsx"),
     ]);
     assert.match(component, /\[1,\s*2,\s*3\]/);
-    for (const command of ["save", "reset", "activate", "preset"]) assert.match(component, new RegExp(`value=\\"${command}\\"`));
+    for (const command of ["save", "reset", "activate"]) assert.match(component, new RegExp(`value=\\"${command}\\"`));
     for (const token of ["canvas", "surface", "primary_accent", "secondary_accent", "primary_text", "muted_text"]) assert.match(component, new RegExp(token));
     assert.match(component, /live preview/);
     assert.match(component, /paletteWarnings/);
-    assert.match(action, /profile_id,slot/);
-    assert.match(action, /active_custom_slot:null/);
-    assert.match(account, /<CustomPalettes/);
+    assert.match(action, /requireActiveProfile\("admin"\)/);
+    assert.match(action, /site_custom_palettes/);
+    assert.match(action, /active_custom_slot: null/);
+    assert.match(admin, /<CustomPalettes/);
+    assert.doesNotMatch(account, /CustomPalettes|user_appearance/);
     assert.match(layout, /data-custom-palette/);
+    assert.doesNotMatch(layout, /user_appearance|user_custom_palettes/);
   });
 
   it("keeps the Napkin capture compact and orders Link, embedded sketch, Store, then export", async () => {

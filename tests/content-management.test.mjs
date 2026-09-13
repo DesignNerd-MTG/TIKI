@@ -69,7 +69,7 @@ describe("content validation and failure handling", () => {
     const result = validateContentInput("fixture", "contributor", {
       name: "MVP Test Fixture", manufacturer: "Test", fixture_type: "Mover Wash", preferred_mode: "Extended",
       dmx_footprint: "32", typical_use: "Testing", power_note: "", control_note: "", field_notes: "",
-      power_input_connector: "powerCON TRUE1 TOP", power_passthrough: "true",
+      power_input_connector: "powerCON TRUE1", power_passthrough: "true",
       fixture_page_url: "", dmx_chart_url: "https://example.com/chart", manual_url: "", ies_url: "https://example.com/fixture.ies", photometrics_url: "https://example.com/photometrics", showfile_url: "", status: "draft", tags: "LED, led, Broadcast", revision_note: "Initial test record",
     });
     assert.equal(result.valid, true);
@@ -101,7 +101,7 @@ describe("content validation and failure handling", () => {
   it("normalizes fixture power input and passthrough without guessing legacy values", () => {
     const input = {
       name: "Power Test", manufacturer: "Test", fixture_type: "LED PAR", preferred_mode: "", dmx_footprint: "",
-      power_input_connector: "Stage Pin / Bates", power_passthrough: "false", power_note: "120 V", control_note: "", field_notes: "",
+      power_input_connector: "Stage Pin", power_passthrough: "false", power_note: "120 V", control_note: "", field_notes: "",
       fixture_page_url: "", manual_url: "", dmx_chart_url: "", ies_url: "", photometrics_url: "", showfile_url: "", status: "draft", tags: "", revision_note: "",
     };
     const valid = validateContentInput("fixture", "contributor", input);
@@ -113,8 +113,7 @@ describe("content validation and failure handling", () => {
     const unknownPassthrough = validateContentInput("fixture", "contributor", { ...input, power_passthrough: "maybe" });
     assert.equal(unknownPassthrough.valid, false);
     if (!unknownPassthrough.valid) assert.match(unknownPassthrough.fieldErrors.power_passthrough, /Yes or No/i);
-    assert.ok(fixturePowerInputOptions.some((option) => option.value === "powerCON 20 A (blue/gray)"));
-    assert.ok(fixturePowerInputOptions.some((option) => option.value === "IEC 60309 / Pin & Sleeve"));
+    assert.deepEqual(fixturePowerInputOptions.map((option) => option.value), ["powerCON TRUE1", "powerCON Blue/Gray", "Edison", "Stage Pin", "Twist-Lock / L5-15", "Twist-Lock / L6-20", "IEC", "Hardwired", "Other"]);
   });
 
   it("returns field-specific errors for missing names and unsafe URLs", () => {

@@ -7,6 +7,7 @@ export type GdtfReview = {
   manufacturer: string;
   description: string;
   weightLb: number | null;
+  wattage?: number | null;
   modes: GdtfMode[];
   warnings: string[];
 };
@@ -40,6 +41,7 @@ export function gdtfPrefill(review: GdtfReview, manufacturers: FixtureManufactur
     manufacturer: manufacturer?.name ?? review.manufacturer,
     manufacturer_id: manufacturer?.id ?? "",
     field_notes: "",
+    wattage: review.wattage ?? null,
     weight_lb: review.weightLb,
     ip_rating: "",
     preferred_mode: mode?.name ?? "",

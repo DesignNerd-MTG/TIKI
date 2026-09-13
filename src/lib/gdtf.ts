@@ -4,7 +4,7 @@ import { fromBuffer, type Entry, type ZipFile } from "yauzl";
 import { crc32 } from "node:zlib";
 import type { Readable } from "node:stream";
 import { SaxesParser } from "saxes";
-import { kilogramsToPounds, validFixtureWeight } from "./fixture-physical.ts";
+import { kilogramsToPounds, validFixtureWattage, validFixtureWeight } from "./fixture-physical.ts";
 import type { GdtfMode, GdtfReview } from "./gdtf-review.ts";
 import { gdtfUploadLimit, validateGdtfUpload } from "./gdtf-review.ts";
 
@@ -184,11 +184,16 @@ export async function parseGdtf(buffer: Buffer, filename: string): Promise<GdtfR
   const pounds = kilogramsToPounds(kilograms);
   const weightLb = knownVersion && validFixtureWeight(pounds) ? Number(pounds.toPrecision(12)) : null;
   if (weightLb === null) warnings.push("No reliable fixture weight supplied. Weight is left blank.");
+  const powerNodes = children(child(child(fixture, "PhysicalDescriptions"), "Properties"), "PowerConsumption");
+  const rawWattage = powerNodes.length === 1 ? powerNodes[0].attributes.Value : undefined;
+  const parsedWattage = rawWattage && /^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(rawWattage.trim()) ? Number(rawWattage) : NaN;
+  const wattage = knownVersion && powerNodes.length === 1 && validFixtureWattage(parsedWattage) ? parsedWattage : null;
+  if (wattage === null) warnings.push("No single reliable explicit power-consumption value supplied. Wattage is left blank.");
   warnings.push("IP Rating has no reliable standard mapping in this supported GDTF subset. Choose it from an authoritative specification.");
   if (fixture.attributes.Thumbnail) warnings.push("Archive thumbnail is not imported. Embedded images/models are not extracted or displayed.");
   const modeNodes = children(child(fixture, "DMXModes"), "DMXMode");
   if (modeNodes.length > gdtfLimits.modes) return reject("GDTF contains too many modes to review safely (maximum 128).");
   const modes = modeNodes.map((mode) => modeSummary(mode, child(fixture, "Geometries"), knownVersion));
   if (!modes.length) warnings.push("No DMX modes found. Enter preferred mode and footprint manually if known.");
-  return { version, name, manufacturer, description, weightLb, modes, warnings };
+  return { version, name, manufacturer, description, weightLb, wattage, modes, warnings };
 }

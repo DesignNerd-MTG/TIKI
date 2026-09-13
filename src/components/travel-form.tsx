@@ -37,7 +37,7 @@ export function TravelForm({ name, details, flightyUrl, shareFlighty, shareBooki
           {state.fieldErrors?.flighty_url && <small className="field-error">{state.fieldErrors.flighty_url}</small>}
         </label>
       </div>
-      <div className="content-form__actions"><TravelSaveButton /></div>
+      <div className="content-form__actions content-form__actions--sticky"><TravelSaveButton /></div>
     </form>
   );
 }

@@ -38,8 +38,12 @@ export async function ReferenceHub({ params }: { params: ReferenceParams }) {
   const cards = selected ? referenceCollections.filter((item) => item.parent_id === selected.id) : referenceCollections.filter((item) => !item.parent_id);
   const href = (number: number) => "/links?" + new URLSearchParams({ q: query, collection: selected?.id ?? "", subcollection: sub?.id ?? "", view: archived ? "archived" : "", page: String(number), sort });
   const sortedLink = (url: string) => url + (url.includes("?") ? "&" : "?") + "sort=" + sort;
+  const addReferenceParams = new URLSearchParams();
+  if (selected) addReferenceParams.set("collection", selected.id);
+  if (sub) addReferenceParams.set("subcollection", sub.id);
+  const addReferenceHref = addReferenceParams.size ? `/links/new?${addReferenceParams}` : "/links/new";
   return <div className="page-stack">
-    <PageHeader eyebrow="Reference Hub" title={sub?.name ?? selected?.name ?? "Reference Hub"} description={sub?.description ?? selected?.description ?? "Useful references organized by what they help you do."} action={canCreateContent(profile.role,"link") && <Link className="primary-button" href="/links/new">+ Add Reference</Link>} />
+    <PageHeader eyebrow="Reference Hub" title={sub?.name ?? selected?.name ?? "Reference Hub"} description={sub?.description ?? selected?.description ?? "Useful references organized by what they help you do."} action={canCreateContent(profile.role,"link") && <Link className="primary-button" href={addReferenceHref}>+ Add Reference</Link>} />
     <nav className="page-actions" aria-label="Reference collections"><Link href={sortedLink("/links")}>All collections</Link><Link href={sortedLink("/links?collection=unsorted")}>Unsorted inbox</Link>{selected && <Link href={sortedLink("/links?collection="+selected.id)}>{selected.name}</Link>}{["editor","admin"].includes(profile.role) && <Link href={sortedLink(archived ? "/links" : "/links?view=archived")}>{archived ? "Current references" : "Archived references"}</Link>}</nav>
     <form className="search-page-form" action="/links"><input type="hidden" name="sort" value={sort} /><input name="q" aria-label="Search references" defaultValue={query} placeholder="Search title, URL, notes, collection, or tags…" maxLength={100} /><input type="hidden" name="collection" value={selected?.id ?? ""} /><input type="hidden" name="subcollection" value={sub?.id ?? ""} /><input type="hidden" name="view" value={archived ? "archived" : ""} /><button className="primary-button">Search</button></form>
     {counts.error || result.error ? <DatabaseNotice /> : <>

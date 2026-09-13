@@ -1,5 +1,5 @@
 import { contentConfigs } from "./content.ts";
-import { validFixtureWeight } from "./fixture-physical.ts";
+import { validFixtureWattage, validFixtureWeight } from "./fixture-physical.ts";
 import { canSetStatus } from "./content-rules.ts";
 import { referenceDefaults, validCollectionPair, isReferenceTimestamp } from "./references.ts";
 import type { AppRole, EntityKind } from "@/lib/types";
@@ -71,6 +71,9 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
         const number = Number(value);
         if (kind === "fixture" && field.name === "weight_lb") {
           if (!/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value) || !validFixtureWeight(number)) errors[field.name] = "Enter a weight greater than 0 and at most 10,000 lb.";
+          else payload[field.name] = number;
+        } else if (kind === "fixture" && field.name === "wattage") {
+          if (!/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value) || !validFixtureWattage(number)) errors[field.name] = "Enter wattage greater than 0.";
           else payload[field.name] = number;
         } else if (!Number.isInteger(number) || number < 1 || number > 32768) errors[field.name] = "Enter a positive whole number.";
         else payload[field.name] = number;

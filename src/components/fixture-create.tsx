@@ -67,6 +67,7 @@ export function FixtureCreate({ statuses, defaultStatus, manufacturers, canAddMa
             <div><dt>Manufacturer from file</dt><dd>{review.manufacturer || "Not supplied"}</dd></div>
             <div><dt>Resolution</dt><dd>{resolved ? `Matched: ${resolved.name} — confirm in the form.` : "Manufacturer not currently in T.I.K.I. or ambiguous. Choose a canonical manufacturer in the review form. Editors/Admins may explicitly add a new brand."}</dd></div>
             <div><dt>GDTF Description</dt><dd>{review.description || "Not supplied"}<small>Source metadata only. Not automatically saved as Field Notes.</small></dd></div>
+            <div><dt>Wattage</dt><dd>{review.wattage == null ? "Not supplied" : `${review.wattage} W (explicit GDTF value; editable)`}</dd></div>
             <div><dt>Weight</dt><dd>{review.weightLb === null ? "Not supplied" : `${formatFixtureWeight(review.weightLb)} (converted from kg; editable)`}</dd></div>
           </dl>
           <label className="form-field"><span>Choose Preferred Mode</span><select value={selection} onChange={(event) => setSelection(event.target.value)}>

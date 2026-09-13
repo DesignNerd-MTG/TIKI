@@ -35,23 +35,14 @@ export const fixtureTypeOptions = [
 ].map((value) => ({ value, label: value }));
 
 export const fixturePowerInputOptions = [
-  "powerCON TRUE1 TOP",
-  "powerCON TRUE1 (legacy)",
-  "powerCON 20 A (blue/gray)",
-  "powerCON 32 A",
-  "Edison / NEMA 5-15",
-  "NEMA 5-20",
-  "Stage Pin / Bates",
-  "Twist-Lock / NEMA L5-20",
-  "IEC C14",
-  "IEC C20",
-  "Schuko / CEE 7/7",
-  "IEC 60309 / Pin & Sleeve",
-  "Socapex",
-  "Hardwired / bare lead",
-  "External low-voltage DC supply",
-  "Battery / rechargeable",
-  "Multiple / configurable",
+  "powerCON TRUE1",
+  "powerCON Blue/Gray",
+  "Edison",
+  "Stage Pin",
+  "Twist-Lock / L5-15",
+  "Twist-Lock / L6-20",
+  "IEC",
+  "Hardwired",
   "Other",
 ].map((value) => ({ value, label: value }));
 
@@ -125,6 +116,7 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
       ] },
       { name: "preferred_mode", label: "LDG preferred mode", type: "text", maxLength: 160 },
       { name: "dmx_footprint", label: "DMX Footprint in Preferred Mode", type: "number", help: "Positive channel count." },
+      { name: "wattage", label: "Wattage", type: "number", help: "Optional explicit power consumption in watts; decimals allowed and must be greater than 0." },
       { name: "weight_lb", label: "Weight (lb)", type: "number", help: "Optional weight in pounds; decimals allowed, greater than 0 and at most 10,000 lb." },
       { name: "ip_rating", label: "IP Rating", type: "select", options: [{ value: "", label: "Not specified" }, ...fixtureIpRatings.map((value) => ({ value, label: value }))] },
       { name: "power_input_connector", label: "Power input", type: "select", options: [

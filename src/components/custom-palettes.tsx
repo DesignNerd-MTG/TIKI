@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Palette } from "lucide-react";
 
-import { updateCustomPaletteAction, type PaletteActionState } from "@/app/(portal)/account/appearance-actions";
+import { updateSitePaletteAction, type PaletteActionState } from "@/app/(portal)/admin/palette-actions";
 import { customPaletteDefaults, customPaletteStyle, paletteWarnings, validPaletteTokens, type CustomPalette, type CustomPaletteTokens } from "@/lib/theme";
 
 const labels: Record<keyof CustomPaletteTokens, string> = {
@@ -18,7 +18,7 @@ const labels: Record<keyof CustomPaletteTokens, string> = {
 
 export function CustomPalettes({ saved, activeSlot }: { saved: CustomPalette[]; activeSlot: number | null }) {
   const router = useRouter();
-  const [state, action] = useActionState(updateCustomPaletteAction, { ok: false, message: "" } satisfies PaletteActionState);
+  const [state, action] = useActionState(updateSitePaletteAction, { ok: false, message: "" } satisfies PaletteActionState);
   const [palettes, setPalettes] = useState<CustomPalette[]>(() => [1,2,3].map((slot) => saved.find((palette) => palette.slot === slot) ?? { slot, name: `Custom Palette ${slot}`, tokens: { ...customPaletteDefaults } }));
 
   useEffect(() => {
@@ -34,10 +34,9 @@ export function CustomPalettes({ saved, activeSlot }: { saved: CustomPalette[]; 
   return (
     <section className="panel custom-palettes" aria-labelledby="custom-palettes-heading">
       <div className="panel__heading">
-        <div><p className="eyebrow">Personal appearance</p><h2 id="custom-palettes-heading"><Palette size={19} /> Custom palettes</h2></div>
-        <form action={action}><input type="hidden" name="slot" value="1" /><button className="secondary-button" name="command" value="preset" type="submit">Use site preset</button></form>
+        <div><p className="eyebrow">Admin-managed additions</p><h2 id="custom-palettes-heading"><Palette size={19} /> Custom palettes</h2></div>
       </div>
-      <p className="appearance-panel__intro">The Admin-selected curated theme is the base. Your active custom palette overrides its six core colors only for your account.</p>
+      <p className="appearance-panel__intro">These three saved slots extend the curated Appearance choices for everyone in T.I.K.I. Unsaved preview changes stay in this editor.</p>
       {state.message && <div className={`notice ${state.ok ? "notice--success" : "notice--error"}`} role="status">{state.ok && <Check size={17} />}{state.message}</div>}
       <div className="custom-palette-grid">
         {palettes.map((palette) => {
@@ -64,7 +63,7 @@ export function CustomPalettes({ saved, activeSlot }: { saved: CustomPalette[]; 
               {warnings.length > 0 && <div className="notice notice--warning" role="status">{warnings.map((warning) => <span key={warning}>{warning}</span>)}</div>}
               <div className="page-actions">
                 <button className="primary-button" name="command" value="save" type="submit">Save Palette</button>
-                <button className="secondary-button" name="command" value="activate" type="submit" disabled={!isSaved || isActive}>{isActive ? "Active" : "Use this palette"}</button>
+                <button className="secondary-button" name="command" value="activate" type="submit" disabled={!isSaved || isActive}>{isActive ? "Active site-wide" : "Use site-wide"}</button>
                 <button className="secondary-button" name="command" value="reset" type="submit">Reset Palette</button>
               </div>
             </form>

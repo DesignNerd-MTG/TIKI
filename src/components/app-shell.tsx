@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BookOpenText,
   Boxes,
@@ -66,6 +66,7 @@ type AppShellProps = {
 
 export function AppShell({ children, name, email, role, profileId, avatarVersion }: AppShellProps) {
   const pathname = usePathname();
+  const searchRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const onNapkinRoute = pathname === "/napkin" || pathname.startsWith("/napkin/");
   const [napkinsOpen, setNapkinsOpen] = useState(onNapkinRoute);
@@ -79,6 +80,23 @@ export function AppShell({ children, name, email, role, profileId, avatarVersion
     if (href === "/napkin/pile") return pathname === href || /^\/napkin\/[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(pathname);
     return pathname === href || pathname.startsWith(`${href}/`);
   };
+
+  useEffect(() => {
+    function focusSearch(event: KeyboardEvent) {
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.matches("input, textarea, select") || target.isContentEditable || Boolean(target.closest("[contenteditable='true']")))) return;
+      const slash = event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey;
+      const command = event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey) && !event.altKey;
+      if (!slash && !command) return;
+      const input = searchRef.current;
+      if (!input || input.getClientRects().length === 0) return;
+      event.preventDefault();
+      input.focus();
+      input.select();
+    }
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
 
   const nav = (
     <>
@@ -154,8 +172,8 @@ export function AppShell({ children, name, email, role, profileId, avatarVersion
           </button>
           <form className="global-search" action="/search" method="get" role="search">
             <Search size={18} aria-hidden="true" />
-            <input name="q" type="search" maxLength={100} placeholder="Search content, notes, and tags…" aria-label="Search T.I.K.I." />
-            <kbd>Enter</kbd>
+            <input ref={searchRef} name="q" type="search" maxLength={100} placeholder="Search content, notes, and tags…" aria-label="Search T.I.K.I." />
+            <kbd>/ · ⌘/Ctrl K</kbd>
           </form>
           <div className="topbar__identity">
             <span className="status-dot" aria-hidden="true" />

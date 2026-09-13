@@ -105,8 +105,8 @@ export function ContentEditor({
   initialValues?: Record<string, string | number | null>;
 }) {
   const config = contentConfigs[kind];
-  const [collection, setCollection] = useState(String(record?.collection_id ?? "unsorted"));
-  const [subcollection, setSubcollection] = useState(String(record?.subcollection_id ?? ""));
+  const [collection, setCollection] = useState(String(record?.collection_id ?? initialValues.collection_id ?? "unsorted"));
+  const [subcollection, setSubcollection] = useState(String(record?.subcollection_id ?? initialValues.subcollection_id ?? ""));
   const sketchPadRef = useRef<SketchPadHandle>(null);
   const [hasSketch, setHasSketch] = useState(false);
   const showStatusControl = kind !== "napkin" || Boolean(record && statuses.length > 1);
@@ -159,7 +159,7 @@ export function ContentEditor({
               ) : field.type === "checkbox" ? (
                 <span className="check-control"><input name={field.name} type="checkbox" value="true" defaultChecked={value === true} /> Yes</span>
               ) : (
-                <input name={field.name} type={field.type} step={field.name === "weight_lb" ? "any" : undefined} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} required={field.required} maxLength={field.maxLength} placeholder={field.placeholder} aria-invalid={Boolean(error)} autoFocus={!record && index === 0} />
+                <input name={field.name} type={field.type} step={["wattage", "weight_lb"].includes(field.name) ? "any" : undefined} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} required={field.required} maxLength={field.maxLength} placeholder={field.placeholder} aria-invalid={Boolean(error)} autoFocus={!record && index === 0} />
               )}
               {fieldHelp && <small>{fieldHelp}</small>}
               {error && <small className="field-error">{error}</small>}
@@ -198,7 +198,7 @@ export function ContentEditor({
           {state.fieldErrors?.revision_note && <small className="field-error">{state.fieldErrors.revision_note}</small>}
         </label>}
       </div>
-      <div className={`content-form__actions ${kind === "napkin" && !record ? "napkin-capture-actions" : ""}`}>
+      <div className={`content-form__actions ${["fixture", "link", "napkin", "show"].includes(kind) ? "content-form__actions--sticky" : ""} ${kind === "napkin" && !record ? "napkin-capture-actions" : ""}`}>
         <SubmitButton create={!record} label={kind === "napkin" && !record ? "Store Napkin" : undefined} />
         {kind === "napkin" && !record && <button className="secondary-button" type="button" disabled={!hasSketch} onClick={() => sketchPadRef.current?.saveToDevice()}><Download size={16} /> Save sketch to device</button>}
       </div>
@@ -225,7 +225,7 @@ export function FileNapkinControl({ id, suggestedTitle, hasSourceUrl, collection
           <label className="form-field"><span>Record title</span><input name="record_title" defaultValue={suggestedTitle} maxLength={160} aria-invalid={Boolean(state.fieldErrors?.record_title)} />{state.fieldErrors?.record_title && <small className="field-error">{state.fieldErrors.record_title}</small>}</label>
           <label className="form-field form-field--wide"><span>Approval note</span><textarea name="review_note" rows={2} maxLength={500} placeholder="Why this belongs in the knowledge base" aria-invalid={Boolean(state.fieldErrors?.review_note)} /><small>{hasSourceUrl ? "The source link will be copied to the filed record." : "No Source URL is required for Reference Hub filing."}</small>{state.fieldErrors?.review_note && <small className="field-error">{state.fieldErrors.review_note}</small>}</label>
         </div>
-        <div className="content-form__actions"><FileButton /></div>
+        <div className="content-form__actions content-form__actions--sticky"><FileButton /></div>
       </form>
     </section>
   );
