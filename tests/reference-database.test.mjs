@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { before, after, describe, it } from "node:test";
 import { readFile, readdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
+import { storageFixture } from "./storage-fixture.mjs";
 import { checkReference } from "../src/lib/reference-fetch.ts";
 import { referenceCollections } from "../src/lib/references.ts";
 
@@ -18,6 +19,7 @@ before(async()=>{
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     grant usage on schema auth,public to authenticated,anon;
     grant execute on function auth.uid() to authenticated,anon;`);
+  await storageFixture(db);
   const directory=new URL("../supabase/migrations/",import.meta.url);
   const migrations=(await readdir(directory)).filter(name=>name.endsWith(".sql")).sort();
   for(const name of migrations){
@@ -41,6 +43,12 @@ before(async()=>{
       await db.exec(await readFile(new URL(name,directory),"utf8"));
       assert.deepEqual((await db.query("select * from public.reference_collections where id <> 'ldg-ldge-documents' order by id")).rows,taxonomy);
       assert.deepEqual((await db.query("select * from public.link_items order by id")).rows,links);
+    }else if(name==="202609140007_profile_avatars.sql"){
+      const policies=(await db.query("select * from pg_policies where schemaname='public' order by tablename,policyname")).rows;
+      const profiles=(await db.query("select * from public.profiles order by id")).rows;
+      await db.exec(await readFile(new URL(name,directory),"utf8"));
+      assert.deepEqual((await db.query("select * from pg_policies where schemaname='public' order by tablename,policyname")).rows,policies);
+      assert.deepEqual((await db.query("select * from public.profiles order by id")).rows,profiles);
     }else{
       await db.exec(await readFile(new URL(name,directory),"utf8"));
     }
@@ -48,6 +56,67 @@ before(async()=>{
 });
 after(async()=>{await db.close();});
 describe("Reference PostgreSQL migration and RLS",()=>{
+  it("auth email and metadata updates cannot overwrite shared-name edits or resurrect a removed avatar",async()=>{
+    await as('viewer');await db.query("select public.set_directory_display_name('Member Chosen')");
+    await db.query('select public.set_profile_avatar(false)');
+    await db.exec('reset role');
+    await db.query("update auth.users set email='changed@test.invalid',raw_user_meta_data=$1 where id=$2",[{full_name:'Stale Name',avatar_url:'https://old.example/avatar'},ids.viewer]);
+    const row=(await db.query('select email,full_name,avatar_url from public.profiles where id=$1',[ids.viewer])).rows[0];
+    assert.deepEqual(row,{email:'changed@test.invalid',full_name:'Member Chosen',avatar_url:null});
+    await db.query("update auth.users set email='viewer@test.invalid',raw_user_meta_data='{}' where id=$1",[ids.viewer]);
+    await db.query('update public.profiles set full_name=null where id=$1',[ids.viewer]);
+  });
+  it("private avatar bucket and functions retain narrow active-only grants and security",async()=>{
+    await db.exec('reset role');
+    const bucket=(await db.query("select * from storage.buckets where id='tiki-avatars'")).rows[0];
+    assert.equal(bucket.public,false);assert.equal(Number(bucket.file_size_limit),2097152);assert.deepEqual(bucket.allowed_mime_types,['image/webp']);
+    for(const signature of ['profile_avatar_path(uuid)','set_profile_avatar(boolean)','avatar_is_shared(text)']) {
+      const row=(await db.query("select prosecdef,proconfig,has_function_privilege('anon',oid,'execute') as anon,has_function_privilege('authenticated',oid,'execute') as member,has_function_privilege('service_role',oid,'execute') as service from pg_proc where oid=$1::regprocedure",['public.'+signature])).rows[0];
+      assert.equal(row.prosecdef,true);assert.deepEqual(row.proconfig,['search_path=""']);assert.equal(row.anon,false);assert.equal(row.member,true);assert.equal(row.service,false);
+    }
+    await db.exec('set role anon');
+    for(const sql of ["select public.profile_avatar_path('11111111-1111-4111-8111-111111111111')","select public.set_profile_avatar(true)","select public.avatar_is_shared('any')"]) await assert.rejects(()=>db.query(sql),e=>e.code==='42501');
+    assert.equal((await db.query('select * from storage.objects')).rows.length,0);
+    await assert.rejects(()=>db.query("insert into storage.objects(bucket_id,name) values('tiki-avatars','any')"),e=>e.code==='42501');
+    await db.exec('reset role');
+  });
+  it("avatar owner can upload, replace and remove without changing another profile or private fields",async()=>{
+    await as('viewer');
+    const before=(await db.query('select email,role,active,full_name from public.profiles where id=$1',[ids.viewer])).rows[0];
+    const path=ids.viewer+'/avatar.webp';
+    await assert.rejects(()=>db.query('select public.set_profile_avatar(true)'));
+    await db.query("insert into storage.objects(bucket_id,name) values('tiki-avatars',$1)",[path]);
+    await db.query('select public.set_profile_avatar(true)');
+    assert.equal((await db.query('select public.profile_avatar_path($1) as path',[ids.viewer])).rows[0].path,path);
+    // Supabase upsert requires both SELECT and UPDATE on the existing object.
+    assert.equal((await db.query("insert into storage.objects(bucket_id,name) values('tiki-avatars',$1) on conflict(bucket_id,name) do update set name=excluded.name returning name",[path])).rows.length,1);
+    await assert.rejects(()=>db.query("update storage.objects set name=$1 where name=$2",[ids.admin+'/avatar.webp',path]),e=>e.code==='42501');
+    await assert.rejects(()=>db.query("update public.profiles set avatar_url='https://unsafe.example' where id=$1",[ids.viewer]),e=>e.code==='42501');
+    assert.deepEqual((await db.query('select email,role,active,full_name from public.profiles where id=$1',[ids.viewer])).rows[0],before);
+    await db.query('delete from storage.objects where name=$1',[path]);await db.query('select public.set_profile_avatar(false)');
+    assert.equal((await db.query('select avatar_url from public.profiles where id=$1',[ids.viewer])).rows[0].avatar_url,null);
+    await db.exec('reset role');
+  });
+  it("active members read shared avatars but neither other owners nor Admin can write them",async()=>{
+    const path=ids.viewer+'/avatar.webp';
+    await as('viewer');await db.query("insert into storage.objects(bucket_id,name) values('tiki-avatars',$1)",[path]);await db.query('select public.set_profile_avatar(true)');
+    for(const role of ['contributor','admin']) {
+      await as(role);
+      assert.equal((await db.query('select name from storage.objects where name=$1',[path])).rows.length,1);
+      assert.equal((await db.query('select public.profile_avatar_path($1) as path',[ids.viewer])).rows[0].path,path);
+      assert.equal((await db.query('update storage.objects set name=name where name=$1 returning name',[path])).rows.length,0);
+      assert.equal((await db.query('delete from storage.objects where name=$1 returning name',[path])).rows.length,0);
+      await assert.rejects(()=>db.query("insert into storage.objects(bucket_id,name) values('tiki-avatars',$1) on conflict(bucket_id,name) do update set name=excluded.name",[path]),e=>e.code==='42501');
+    }
+    await as('pending');assert.equal((await db.query('select * from storage.objects')).rows.length,0);
+    assert.equal((await db.query('select public.profile_avatar_path($1) as path',[ids.viewer])).rows[0].path,null);
+    await assert.rejects(()=>db.query('select public.set_profile_avatar(true)'),e=>e.code==='42501');
+    await assert.rejects(()=>db.query("insert into storage.objects(bucket_id,name) values('tiki-avatars',$1)",[ids.pending+'/avatar.webp']),e=>e.code==='42501');
+    await db.exec('reset role');await db.query('update public.profiles set active=false where id=$1',[ids.viewer]);
+    await as('admin');assert.equal((await db.query('select * from storage.objects')).rows.length,0);
+    await db.exec('reset role');await db.query('update public.profiles set active=true where id=$1',[ids.viewer]);
+    await as('viewer');await db.query('delete from storage.objects where name=$1',[path]);await db.query('select public.set_profile_avatar(false)');await db.exec('reset role');
+  });
   it("orders last-name keys before directory page limits with active-only public fields",async()=>{
     await db.exec('reset role');
     const names=['Romi Smith','Sarah Lynn Jakubasz','Mike Grabowski','Jane Adams','zoe adams','jane ADAMS','Prince'];

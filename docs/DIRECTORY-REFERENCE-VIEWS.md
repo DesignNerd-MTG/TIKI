@@ -1,5 +1,14 @@
 # Directory names, Reference views, and private-portal follow-up
 
+## My Profile addendum
+
+Sidebar identity now opens the compact owner-only My Profile page. The same
+shared-name component/action is reused; private avatar storage, small directory
+avatars, validation, permissions and rollout notes are documented in
+[PROFILE-AVATARS.md](PROFILE-AVATARS.md). Include migration 007, auth-sync
+preservation, image delivery and storage ACLs in the final read-only audit.
+No merge, deployment or production migration is authorized by this addition.
+
 ## Width and last-name sorting addendum (supersedes full-name ordering below)
 
 The Social member list alone now has width:100%, max-width:640px and left alignment. Existing 600px stacking and 44px touch targets remain; Reference Hub widths are unchanged.

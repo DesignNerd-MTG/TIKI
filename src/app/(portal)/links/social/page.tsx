@@ -6,6 +6,7 @@ import { isSafeExternalUrl } from "@/lib/content-validation";
 import { canManageSocial, presentSocialAccount, type SocialAccount } from "@/lib/social-accounts";
 import { groupSocialAccounts } from "@/lib/social-directory";
 import { DirectoryName } from "@/components/directory-name";
+import { MemberAvatar } from "@/components/member-avatar";
 import { allSocialPages } from "@/lib/social-directory-pages";
 export const metadata = { title:"Social Directory" };
 export default async function SocialDirectory() {
@@ -21,7 +22,7 @@ export default async function SocialDirectory() {
       {!rows.length && <p>No accounts shared yet. Add your first account below.</p>}
       <DirectoryName name={profile.full_name ?? ""} />
       <section className="social-directory-list" aria-label="Member accounts">{people.map(({id,name,accounts})=><article className="panel social-member" key={id}>
-        <h2>{name}</h2>
+        <h2 className="social-member-heading"><MemberAvatar id={id} name={name} version={id === identity.id ? profile.updated_at : undefined} />{name}</h2>
         <ul className="social-accounts">{accounts.map(row=>{const account=presentSocialAccount(row);return <li className="social-account-row" key={row.id}>
           <div><span>{account.legacy ? "Legacy link" : account.label}</span>{isSafeExternalUrl(row.url) ? <a href={account.legacy ? row.url : account.url} target="_blank" rel="noreferrer">{account.display}</a> : <span>{account.display}</span>}</div>
           {canManageSocial(profile.role,identity.id,row.profile_id) && <SocialAccountEditor item={row} actorId={identity.id} />}

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { it } from "node:test";
 import { readFile,readdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
+import { storageFixture } from "./storage-fixture.mjs";
 
 it("consolidates Documents preserving history, tags, states, source rows and human edits across reruns",async()=>{
   const db=new PGlite();
@@ -10,6 +11,7 @@ it("consolidates Documents preserving history, tags, states, source rows and hum
       create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}'::jsonb);
       create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
       grant usage on schema auth,public to authenticated,anon; grant execute on function auth.uid() to authenticated,anon;`);
+    await storageFixture(db);
     const dir=new URL("../supabase/migrations/",import.meta.url);
     const migration="202609140002_retire_documents.sql";
     for(const name of (await readdir(dir)).filter(n=>n.endsWith(".sql")&&n!==migration).sort())await db.exec(await readFile(new URL(name,dir),"utf8"));
