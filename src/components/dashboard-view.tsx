@@ -10,7 +10,9 @@ import {
   Plus,
   Search,
   Sparkles,
+  Pencil,
 } from "lucide-react";
+import { DashboardStatus } from "@/components/dashboard-status";
 
 const modules = [
   { href: "/fixtures", label: "Fixtures", description: "Modes, charts & field notes", icon: Boxes, key: "fixtures" },
@@ -49,6 +51,7 @@ export function DashboardView({ snapshot, preview = false }: { snapshot: Dashboa
             <button type="submit">Search</button>
           </form>
         </div>
+        {!preview && <DashboardStatus />}
       </section>
 
       {!preview && (
@@ -56,6 +59,7 @@ export function DashboardView({ snapshot, preview = false }: { snapshot: Dashboa
           <div><p className="eyebrow">Quick actions</p><h2>Keep the index moving</h2></div>
           <div className="page-actions">
             <Link className="secondary-button" href="/napkin"><Plus size={15} /> Capture a Napkin</Link>
+            <Link className="secondary-button" href="/sketch"><Pencil size={15} /> Sketch</Link>
           </div>
         </section>
       )}

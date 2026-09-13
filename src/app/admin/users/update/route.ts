@@ -15,6 +15,7 @@ export async function POST(request: Request) {
   const id = String(form.get("id") ?? "");
   const role = String(form.get("role") ?? "") as AppRole;
   const active = form.get("active") === "true";
+  const productionTravelAccess = form.get("production_travel_access") === "true";
 
   if (!isUuid(id) || !roles.includes(role)) {
     return redirectToPath("/admin?error=validation");
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("profiles").update({ role, active }).eq("id", id);
+  const { error } = await supabase.from("profiles").update({ role, active, production_travel_access: productionTravelAccess }).eq("id", id);
   const destination = error ? "/admin?error=save" : "/admin?saved=1";
   return redirectToPath(destination);
 }

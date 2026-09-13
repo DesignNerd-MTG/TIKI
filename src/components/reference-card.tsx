@@ -13,13 +13,13 @@ export function ReferenceCard({ record, tags = [], compact = false, list = false
   return <article className={`panel reference-card${compact ? " reference-card--compact" : ""}${list ? " reference-card--list" : ""}`}>
     {!list && image("preview_image_url") && <img className="reference-card__image" src={image("preview_image_url")} alt="" loading="lazy" referrerPolicy="no-referrer" />}
     <div className="reference-card__body">
-      <p className="reference-card__site">{image("favicon_url") && <img src={image("favicon_url")} width={20} height={20} alt="" loading="lazy" />} {str("site_name") || (compact ? domain : "")}</p>
+      {(str("site_name") || domain) && <p className="reference-card__site">{image("favicon_url") && <img src={image("favicon_url")} width={20} height={20} alt="" loading="lazy" />} {str("site_name") || (compact ? domain : "")}</p>}
       <h2><Link href={"/links/" + record.id}>{str("label") || str("fetched_title") || str("url")}</Link></h2>
       <p>{collectionLabel(record.collection_id,record.subcollection_id)}</p>
       {!list && str("description") && <p className="reference-card__notes">{str("description")}</p>}
       {tags.length > 0 && <div className="tag-list">{tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
-      <p className="reference-card__health">{healthLabels[str("link_health")] ?? "Couldn’t Verify"} · {record.status}</p>
-      <p className="reference-card__dates">Date Added: {formatDate(str("date_added") || record.created_at)}<br />{str("last_checked_at") ? "Last Checked: " + formatDate(str("last_checked_at")) : "Not checked yet"}</p>
+      <p className="reference-card__health">{str("url") ? `${healthLabels[str("link_health")] ?? "Couldn’t Verify"} · ` : ""}{record.status}</p>
+      <p className="reference-card__dates">Date Added: {formatDate(str("date_added") || record.created_at)}{str("url") && <><br />{str("last_checked_at") ? "Last Checked: " + formatDate(str("last_checked_at")) : "Not checked yet"}</>}</p>
       {isSafeExternalUrl(str("url")) && str("url") && <a className="text-link" href={str("url")} rel="noreferrer" target="_blank">Open reference ↗</a>}
     </div>
   </article>;

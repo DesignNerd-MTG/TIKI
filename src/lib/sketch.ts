@@ -1,0 +1,1 @@
+export function sketchFilename(date=new Date()) { const p=(n:number)=>String(n).padStart(2,"0"); return `TIKI-Sketch-${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())}-${p(date.getHours())}${p(date.getMinutes())}.png`; }

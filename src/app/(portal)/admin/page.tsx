@@ -20,7 +20,7 @@ export default async function AdminPage({
   await requireActiveProfile("admin");
   const [params, supabase] = await Promise.all([searchParams, createClient()]);
   const [{ data, error }, { data: settings }] = await Promise.all([
-    supabase.from("profiles").select("id,email,full_name,avatar_url,role,active,created_at,updated_at").order("active").order("created_at", { ascending: false }),
+    supabase.from("profiles").select("id,email,full_name,avatar_url,role,active,production_travel_access,created_at,updated_at").order("active").order("created_at", { ascending: false }),
     supabase.from("site_settings").select("theme").eq("id", "global").maybeSingle(),
   ]);
   const profiles = (data ?? []) as Profile[];
@@ -61,6 +61,7 @@ export default async function AdminPage({
                   <input type="checkbox" name="active" value="true" defaultChecked={profile.active} />
                   <span>Active</span>
                 </label>
+                <label className="switch-control"><input type="checkbox" name="production_travel_access" value="true" defaultChecked={Boolean(profile.production_travel_access)} /><span>Production travel access</span></label>
                 <button className="secondary-button" type="submit">Save</button>
               </form>
             </article>

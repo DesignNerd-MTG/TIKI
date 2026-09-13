@@ -15,6 +15,8 @@ export async function saveTravelAction(_previous: TravelActionState, formData: F
   const name = String(formData.get("name") ?? "").trim();
   const details = String(formData.get("details") ?? "").trim();
   const flightyUrl = String(formData.get("flighty_url") ?? "").trim();
+  const shareFlighty = formData.get("share_flighty") === "true";
+  const shareBooking = formData.get("share_booking") === "true";
   const fieldErrors: Record<string, string> = {};
   if (name.length > 160) fieldErrors.name = "Keep the name to 160 characters or fewer.";
   if (details.length > 12000) fieldErrors.details = "Keep travel details to 12,000 characters or fewer.";
@@ -27,6 +29,8 @@ export async function saveTravelAction(_previous: TravelActionState, formData: F
     name: name || null,
     details: details || null,
     flighty_url: flightyUrl || null,
+    share_flighty: shareFlighty,
+    share_booking: shareBooking,
   }, { onConflict: "user_id" });
   if (result.error) return { ok: false, message: `T.I.K.I. could not save your travel details. ${result.error.message}` };
 

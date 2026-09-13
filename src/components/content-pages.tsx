@@ -15,7 +15,7 @@ import type { EntityKind, ManagedRecord } from "@/lib/types";
 import { ReferenceCard } from "@/components/reference-card";
 import { NapkinPin } from "@/components/napkin-pin";
 import { RecheckReference } from "@/components/reference-controls";
-import { referenceCollection } from "@/lib/references";
+import { referenceCollection, type ReferenceCollectionRow } from "@/lib/references";
 import { canAddFixtureManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
 import { FixtureCreate } from "@/components/fixture-create";
 import { fixtureQuickSpecs, formatFixtureWeight } from "@/lib/fixture-physical";
@@ -190,7 +190,7 @@ export async function ContentDetailPage({
   const result = await supabase.from(config.table).select("*").eq("id", id).maybeSingle();
   if (!result.data) notFound();
   const record = result.data as ManagedRecord;
-  const [tags, revisionsResult, additionalLinksResult, manufacturerResult] = await Promise.all([
+  const [tags, revisionsResult, additionalLinksResult, manufacturerResult, collectionsResult] = await Promise.all([
     getTags(kind, id),
     supabase.from("revision_notes").select("id,summary,source,created_at").eq("entity_kind", kind).eq("entity_id", id).order("created_at", { ascending: false }).limit(30),
     sectionsForKind(kind).length
@@ -199,6 +199,7 @@ export async function ContentDetailPage({
     kind === "fixture"
       ? supabase.from("fixture_manufacturers").select("id,name,slug,active,aliases").order("name")
       : Promise.resolve({ data: [], error: null }),
+    kind === "napkin" ? supabase.from("reference_collections").select("id,name,parent_id") : Promise.resolve({data:[],error:null}),
   ]);
   const additionalLinks = (additionalLinksResult.data ?? []) as AdditionalLink[];
   const manufacturers = (manufacturerResult.data ?? []) as FixtureManufacturer[];
@@ -223,11 +224,11 @@ export async function ContentDetailPage({
       </section>
 
       {tags.length > 0 && <div className="tag-list" aria-label="Tags"><Tags size={15} />{tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
-      {kind === "link" && <section className="panel detail-panel"><ReferenceCard record={record} tags={tags} />{mayEdit && <RecheckReference id={id} />}{typeof record.final_url === "string" && record.final_url !== record.url && <p>Final destination: {record.final_url}</p>}</section>}
+      {kind === "link" && <section className="panel detail-panel"><ReferenceCard record={record} tags={tags} />{mayEdit && Boolean(stringify(record.url)) && <RecheckReference id={id} />}{typeof record.final_url === "string" && record.final_url !== record.url && <p>Final destination: {record.final_url}</p>}</section>}
 
       {filingDestination && <div className="notice notice--success">Filed as <Link href={filingDestination.href}>{filingDestination.config.singular}: open the published record</Link>.</div>}
 
-      {canFileNapkin && <FileNapkinControl id={id} suggestedTitle={title} hasSourceUrl={Boolean(stringify(record.source_url))} />}
+      {canFileNapkin && <FileNapkinControl id={id} suggestedTitle={title} hasSourceUrl={Boolean(stringify(record.source_url))} collections={(collectionsResult.data ?? []) as ReferenceCollectionRow[]} />}
 
       <div className="detail-columns">
         <section className="panel detail-panel">

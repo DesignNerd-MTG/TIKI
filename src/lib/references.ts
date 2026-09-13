@@ -103,6 +103,16 @@ export function validCollectionPair(collection: string, subcollection: string) {
   return Boolean(parent && !parent.parent_id && (!subcollection || referenceCollection(subcollection)?.parent_id === collection));
 }
 
+export type ReferenceCollectionRow = { id: string; name: string; parent_id: string | null };
+export function flatReferenceDestinations(rows: ReferenceCollectionRow[]) {
+  const parents = new Map(rows.filter((row)=>!row.parent_id).map((row)=>[row.id,row]));
+  return rows.map((row) => ({
+    label: row.parent_id ? `${parents.get(row.parent_id)?.name ?? row.parent_id} / ${row.name}` : row.name,
+    collectionId: row.parent_id ?? row.id,
+    subcollectionId: row.parent_id ? row.id : null,
+  })).filter((row)=>parents.has(row.collectionId)).sort((a,b)=>a.label.localeCompare(b.label,undefined,{sensitivity:"base"}) || a.collectionId.localeCompare(b.collectionId) || String(a.subcollectionId).localeCompare(String(b.subcollectionId)));
+}
+
 export function isReferenceTimestamp(value: string) {
   // Require the original timezone, and reject dates that JS silently rolls over.
   const match = /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.exec(value);

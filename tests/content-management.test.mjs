@@ -390,7 +390,7 @@ describe("Supabase RLS migration", () => {
     assert.match(sql, /add column if not exists name text/i);
     assert.match(action, /formData\.get\("name"\)/);
     assert.match(action, /name: name \|\| null/);
-    assert.match(page, /select\("name,details,flighty_url,updated_at"\)/);
+    assert.match(page, /select\("name,details,flighty_url,share_flighty,share_booking,updated_at"\)/);
     assert.match(form, /<span>Name<\/span>[\s\S]*name="name"/);
   });
 

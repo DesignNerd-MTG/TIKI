@@ -1,0 +1,16 @@
+"use client";
+import { useActionState,useEffect,useState } from "react";
+import { useRouter } from "next/navigation";
+import { Palette } from "lucide-react";
+import { updateCustomPaletteAction,type PaletteActionState } from "@/app/(portal)/account/appearance-actions";
+import { customPaletteDefaults,customPaletteStyle,paletteWarnings,type CustomPalette } from "@/lib/theme";
+const labels={canvas:"Background / Canvas",surface:"Surface / Panel",primary_accent:"Primary Accent",secondary_accent:"Secondary Accent",primary_text:"Primary Text",muted_text:"Muted Text"} as const;
+export function CustomPalettes({saved,activeSlot}:{saved:CustomPalette[];activeSlot:number|null}){
+ const router=useRouter(); const [state,action]=useActionState(updateCustomPaletteAction,{ok:false,message:""} satisfies PaletteActionState);
+ const [palettes,setPalettes]=useState(()=>[1,2,3].map(slot=>saved.find(p=>p.slot===slot)??{slot,name:`Custom Palette ${slot}`,tokens:{...customPaletteDefaults}}));
+ useEffect(()=>{if(state.ok)router.refresh()},[state.ok,router]);
+ const update=(slot:number,field:string,value:string)=>setPalettes(current=>current.map(p=>p.slot!==slot?p:field==="name"?{...p,name:value}:{...p,tokens:{...p.tokens,[field]:value}}));
+ return <section className="panel custom-palettes"><div className="panel__heading"><div><p className="eyebrow">Personal appearance</p><h2><Palette size={19}/> Custom palettes</h2></div><form action={action}><input type="hidden" name="slot" value="1"/><button className="secondary-button" name="command" value="preset" type="submit">Use site preset</button></form></div>
+ <p className="appearance-panel__intro">The Admin-selected curated theme is the base. Your active custom palette overrides its six core colors only for your account.</p>{state.message&&<div className={`notice ${state.ok?"notice--success":"notice--error"}`} role="status">{state.message}</div>}
+ <div className="custom-palette-grid">{palettes.map(p=>{const warnings=paletteWarnings(p.tokens); const isSaved=saved.some(row=>row.slot===p.slot); return <form action={action} className="custom-palette" key={p.slot}><input type="hidden" name="slot" value={p.slot}/><label className="form-field"><span>Palette name</span><input name="name" value={p.name} maxLength={40} onChange={e=>update(p.slot,"name",e.target.value)}/></label><div className="palette-token-grid">{Object.entries(labels).map(([key,label])=><label key={key}><span>{label}</span><input name={key} type="color" value={p.tokens[key as keyof typeof p.tokens]} onChange={e=>update(p.slot,key,e.target.value)}/></label>)}</div><div className="palette-sample" style={customPaletteStyle(p.tokens)}><strong>Readable field notes</strong><span>Muted supporting text</span><button type="button">Action</button></div>{warnings.length>0&&<div className="notice notice--warning">{warnings.join(" ")}</div>}<div className="page-actions"><button className="primary-button" name="command" value="save">Save Palette</button><button className="secondary-button" name="command" value="activate" disabled={!isSaved}>{activeSlot===p.slot?"Active":"Use palette"}</button><button className="secondary-button" name="command" value="reset">Reset Palette</button></div></form>})}</div></section>;
+}

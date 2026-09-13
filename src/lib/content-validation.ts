@@ -86,6 +86,7 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
   payload.status = status;
 
   if (kind === "link") {
+    if (!String(payload.label ?? "").trim()) errors.label = "Add a title when this reference has no URL.";
     if (!validCollectionPair(String(input.collection_id), String(input.subcollection_id))) {
       errors.subcollection_id = "Choose a subcollection within the selected collection.";
     }

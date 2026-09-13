@@ -9,7 +9,7 @@ import { archiveContentAction, deleteContentAction, fileNapkinAction, saveConten
 import { sectionsForKind, type AdditionalLink, type AdditionalLinkSection } from "@/lib/additional-links";
 import { contentConfigs, filingDestinationKinds, getStatusLabel } from "@/lib/content";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
-import { referenceCollection } from "@/lib/references";
+import { flatReferenceDestinations, referenceCollection, type ReferenceCollectionRow } from "@/lib/references";
 import { ManufacturerSelector } from "@/components/manufacturer-selector";
 import type { FixtureManufacturer } from "@/lib/fixture-manufacturers";
 
@@ -195,7 +195,7 @@ export function ContentEditor({
   );
 }
 
-export function FileNapkinControl({ id, suggestedTitle, hasSourceUrl }: { id: string; suggestedTitle: string; hasSourceUrl: boolean }) {
+export function FileNapkinControl({ id, suggestedTitle, hasSourceUrl, collections }: { id: string; suggestedTitle: string; hasSourceUrl: boolean; collections: ReferenceCollectionRow[] }) {
   const router = useRouter();
   const [state, action] = useActionState(fileNapkinAction, { ok: false, message: "" } satisfies ContentActionState);
   useEffect(() => {
@@ -210,9 +210,9 @@ export function FileNapkinControl({ id, suggestedTitle, hasSourceUrl }: { id: st
         <input type="hidden" name="id" value={id} />
         {state.message && <div className={`notice ${state.ok ? "notice--success" : "notice--error"}`} role="status">{state.message}</div>}
         <div className="content-form__grid">
-          <label className="form-field"><span>File into</span><select name="target_kind" defaultValue="" aria-invalid={Boolean(state.fieldErrors?.target_kind)}><option value="">Choose a section</option>{filingDestinationKinds.map((kind) => <option value={kind} key={kind}>{contentConfigs[kind].plural}</option>)}</select>{state.fieldErrors?.target_kind && <small className="field-error">{state.fieldErrors.target_kind}</small>}</label>
+          <label className="form-field"><span>File into</span><select name="filing_destination" defaultValue="" aria-invalid={Boolean(state.fieldErrors?.target_kind)}><option value="">Choose a destination</option>{filingDestinationKinds.filter((kind)=>kind!=="link").map((kind) => <option value={kind} key={kind}>{contentConfigs[kind].plural}</option>)}{flatReferenceDestinations(collections).map((destination)=><option value={`link:${destination.collectionId}:${destination.subcollectionId ?? ""}`} key={`${destination.collectionId}:${destination.subcollectionId}`}>{destination.label}</option>)}</select>{state.fieldErrors?.target_kind && <small className="field-error">{state.fieldErrors.target_kind}</small>}</label>
           <label className="form-field"><span>Record title</span><input name="record_title" defaultValue={suggestedTitle} maxLength={160} aria-invalid={Boolean(state.fieldErrors?.record_title)} />{state.fieldErrors?.record_title && <small className="field-error">{state.fieldErrors.record_title}</small>}</label>
-          <label className="form-field form-field--wide"><span>Approval note</span><textarea name="review_note" rows={2} maxLength={500} placeholder="Why this belongs in the knowledge base" aria-invalid={Boolean(state.fieldErrors?.review_note)} /><small>{hasSourceUrl ? "The source link will be copied to the filed record." : "Links and Documents require a Source URL before filing."}</small>{state.fieldErrors?.review_note && <small className="field-error">{state.fieldErrors.review_note}</small>}</label>
+          <label className="form-field form-field--wide"><span>Approval note</span><textarea name="review_note" rows={2} maxLength={500} placeholder="Why this belongs in the knowledge base" aria-invalid={Boolean(state.fieldErrors?.review_note)} /><small>{hasSourceUrl ? "The source link will be copied to the filed record." : "No Source URL is required for Reference Hub filing."}</small>{state.fieldErrors?.review_note && <small className="field-error">{state.fieldErrors.review_note}</small>}</label>
         </div>
         <div className="content-form__actions"><FileButton /></div>
       </form>
@@ -222,8 +222,10 @@ export function FileNapkinControl({ id, suggestedTitle, hasSourceUrl }: { id: st
 
 export function ArchiveButton({ kind, id }: { kind: EntityKind; id: string }) {
   const [state, action] = useActionState(archiveContentAction, { ok: false, message: "" } satisfies ContentActionState);
-  return <div className="mutation-control"><form action={action}><input type="hidden" name="_entity_kind" value={kind} /><input type="hidden" name="id" value={id} /><button className="secondary-button" type="submit"><Archive size={15} /> Archive</button></form>{state.message && <span className={state.ok ? "inline-success" : "field-error"} role="status">{state.message}</span>}</div>;
+  return <div className="mutation-control"><form action={action}><input type="hidden" name="_entity_kind" value={kind} /><input type="hidden" name="id" value={id} /><ArchiveSubmitButton /></form>{state.message && <span className={state.ok ? "inline-success" : "field-error"} role="status">{state.message}</span>}</div>;
 }
+
+function ArchiveSubmitButton() { const { pending }=useFormStatus(); return <button className="secondary-button" type="submit" disabled={pending} aria-busy={pending}>{pending ? "Archiving…" : <><Archive size={15} /> Archive</>}</button>; }
 
 export function DeleteButton({ kind, id, label }: { kind: EntityKind; id: string; label: string }) {
   const [state, action] = useActionState(deleteContentAction, { ok: false, message: "" } satisfies ContentActionState);

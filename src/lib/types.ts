@@ -9,6 +9,7 @@ export type Profile = {
   avatar_url: string | null;
   role: AppRole;
   active: boolean;
+  production_travel_access?: boolean;
   created_at: string;
   updated_at: string;
 };

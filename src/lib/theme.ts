@@ -62,3 +62,29 @@ export function isThemePreset(value: unknown): value is ThemePreset {
 export function resolveTheme(value: unknown): ThemePreset {
   return isThemePreset(value) ? value : defaultTheme;
 }
+
+export const customPaletteDefaults = {
+  canvas: "#2b211b", surface: "#5a4030", primary_accent: "#43b8c4",
+  secondary_accent: "#f06b3d", primary_text: "#fff1d6", muted_text: "#c9ad8b",
+} as const;
+export type CustomPaletteTokens = Record<keyof typeof customPaletteDefaults, string>;
+export type CustomPalette = { slot: number; name: string; tokens: CustomPaletteTokens };
+export function validPaletteTokens(value: unknown): value is CustomPaletteTokens {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  return Object.keys(customPaletteDefaults).every((key) => /^#[0-9a-f]{6}$/i.test(String(record[key] ?? ""))) && Object.keys(record).length === 6;
+}
+function luminance(color: string) {
+  const channels = color.slice(1).match(/../g)!.map((hex) => Number.parseInt(hex,16)/255).map((v) => v <= .03928 ? v/12.92 : ((v+.055)/1.055) ** 2.4);
+  return .2126*channels[0]+.7152*channels[1]+.0722*channels[2];
+}
+export function contrastRatio(a: string,b: string) { const values=[luminance(a),luminance(b)].sort((x,y)=>y-x); return (values[0]+.05)/(values[1]+.05); }
+export function paletteWarnings(tokens: CustomPaletteTokens) {
+  return [["Primary text / canvas",tokens.primary_text,tokens.canvas],["Primary text / surface",tokens.primary_text,tokens.surface],["Muted text / canvas",tokens.muted_text,tokens.canvas]]
+    .filter(([,a,b])=>contrastRatio(a,b)<4.5).map(([label])=>`${label} has low contrast.`);
+}
+export function customPaletteStyle(tokens?: CustomPaletteTokens | null): CSSProperties | undefined {
+  if (!tokens || !validPaletteTokens(tokens)) return undefined;
+  return { "--canvas":tokens.canvas,"--surface":tokens.surface,"--surface-raised":tokens.surface,"--surface-muted":tokens.surface,"--surface-hover":tokens.surface,"--control-fill":tokens.canvas,"--text-primary":tokens.primary_text,"--text-secondary":tokens.muted_text,"--text-muted":tokens.muted_text,"--accent":tokens.primary_accent,"--accent-link":tokens.primary_accent,"--sidebar-accent":tokens.primary_accent,"--sidebar-accent-alt":tokens.secondary_accent,"--gold":tokens.secondary_accent } as CSSProperties;
+}
+import type { CSSProperties } from "react";

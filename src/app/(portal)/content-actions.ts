@@ -154,7 +154,8 @@ export async function saveContentAction(_previous: ContentActionState, formData:
       payload.manufacturer_id = null;
     }
   }
-  if (kind === "link") Object.assign(payload, await checkReference(String(payload.url)));
+  if (kind === "link" && payload.url) Object.assign(payload, await checkReference(String(payload.url)));
+  if (kind === "link" && !payload.url) Object.assign(payload, { site_name:null, fetched_title:null, favicon_url:null, preview_image_url:null, last_checked_at:null, final_url:null, link_health:"could_not_verify" });
   if (!existing) payload.created_by = identity.id;
   if (kind === "napkin" && String(payload.status) === "converted" && existing?.status !== "converted") {
     return { ok: false, message: "Use Approve & File so T.I.K.I. can create and link the destination record." };
@@ -203,7 +204,8 @@ export async function saveContentAction(_previous: ContentActionState, formData:
 
 export async function fileNapkinAction(_previous: ContentActionState, formData: FormData): Promise<ContentActionState> {
   const id = String(formData.get("id") ?? "").trim();
-  const targetKindValue = String(formData.get("target_kind") ?? "").trim();
+  const filingDestination = String(formData.get("filing_destination") ?? "").trim();
+  const [targetKindValue, referenceCollectionId, referenceSubcollectionId] = filingDestination.split(":");
   const recordTitle = String(formData.get("record_title") ?? "").trim();
   const reviewNote = String(formData.get("review_note") ?? "").trim();
   const fieldErrors: Record<string, string> = {};
@@ -226,15 +228,15 @@ export async function fileNapkinAction(_previous: ContentActionState, formData: 
     target_kind: targetKind,
     record_title: recordTitle,
     review_note: reviewNote || null,
+    reference_collection_id: targetKind === "link" ? referenceCollectionId || "unsorted" : null,
+    reference_subcollection_id: targetKind === "link" ? referenceSubcollectionId || null : null,
   });
   const row = Array.isArray(data) ? data[0] : data;
   const recordId = row && typeof row === "object" && "entity_id" in row ? String(row.entity_id) : "";
 
   if (error || !isUuid(recordId)) {
     const detail = error?.message ?? "Try again.";
-    const friendly = detail.includes("Source URL")
-      ? detail
-      : detail.includes("already filed")
+    const friendly = detail.includes("already filed")
         ? "This Napkin has already been filed. Refresh the page to see its destination."
         : `T.I.K.I. could not file this Napkin. ${detail}`;
     return { ok: false, message: friendly };

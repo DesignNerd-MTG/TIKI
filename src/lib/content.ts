@@ -166,8 +166,8 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
     eyebrow: "Resources worth keeping", description: "Find references by collection, across systems, workflows, and ideas.",
     minimumCreateRole: "contributor", titleField: "label",
     fields: [
-      { name: "url", label: "Authoritative URL", type: "url", required: true, placeholder: "https://…", wide: true },
-      { name: "label", label: "Title / label", type: "text", maxLength: 160, help: "Optional for quick capture; defaults to the website host." },
+      { name: "url", label: "Authoritative URL", type: "url", placeholder: "https://…", help: "Optional. URL-less references retain notes, taxonomy, tags, and history.", wide: true },
+      { name: "label", label: "Title / label", type: "text", maxLength: 160, help: "Required when no Authoritative URL is supplied; URL-only capture defaults to the host." },
       { name: "collection_id", label: "Collection", type: "select", options: [
         { value: "unsorted", label: "Unsorted" },
         ...referenceCollections.filter((item) => !item.parent_id && item.id !== "unsorted").map((item) => ({ value: item.id, label: item.name })),
