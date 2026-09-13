@@ -36,7 +36,7 @@ export function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-export function validateContentInput(kind: EntityKind, role: AppRole, input: ContentInput, previousStatus?: string): ValidationResult {
+export function validateContentInput(kind: EntityKind, role: AppRole, input: ContentInput, previousStatus?: string, previousRecord?: Record<string, unknown>): ValidationResult {
   if (kind === "link") input = referenceDefaults(input);
   const config = contentConfigs[kind];
   const errors: Record<string, string> = {};
@@ -53,6 +53,10 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
     if (field.type === "url" && value.length > 2048) errors[field.name] = "URL must be 2,048 characters or fewer.";
     if (field.type === "url" && value && !isSafeExternalUrl(value)) errors[field.name] = "Use a complete http:// or https:// URL.";
     if (field.type === "date" && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) errors[field.name] = "Use a valid date.";
+    if (field.type === "select" && value && field.options && !field.options.some((option) => option.value === value)) {
+      const unchangedLegacyValue = previousRecord && String(previousRecord[field.name] ?? "") === value;
+      if (!unchangedLegacyValue) errors[field.name] = `Choose a listed ${field.label.toLowerCase()}.`;
+    }
     if (field.type === "number") {
       if (!value) payload[field.name] = null;
       else {

@@ -79,9 +79,20 @@ export async function ContentIndexPage({
     createClient(),
   ]);
   const showArchived = params.view === "archived" && (profile.role === "editor" || profile.role === "admin");
-  const sort = params.sort === "alpha" || (kind === "location" && params.sort === "city") ? params.sort : "date";
+  const fixtureSorts = new Set(["manufacturer", "type", "name"]);
+  const sort = kind === "fixture" && fixtureSorts.has(String(params.sort))
+    ? String(params.sort)
+    : kind === "fixture" && params.sort === "alpha"
+      ? "name"
+      : params.sort === "alpha" || (kind === "location" && params.sort === "city") ? params.sort : "date";
   let query = supabase.from(config.table).select("*");
-  query = sort === "city"
+  query = sort === "manufacturer"
+    ? query.order("manufacturer", { ascending: true, nullsFirst: false }).order("name", { ascending: true }).order("updated_at", { ascending: false })
+    : sort === "type"
+      ? query.order("fixture_type", { ascending: true, nullsFirst: false }).order("manufacturer", { ascending: true, nullsFirst: false }).order("name", { ascending: true })
+      : sort === "name"
+        ? query.order("name", { ascending: true }).order("manufacturer", { ascending: true, nullsFirst: false }).order("updated_at", { ascending: false })
+        : sort === "city"
     ? query.order("city", { ascending: true, nullsFirst: false }).order(config.titleField, { ascending: true })
     : sort === "alpha"
       ? query.order(config.titleField, { ascending: true }).order("updated_at", { ascending: false })
@@ -108,7 +119,11 @@ export async function ContentIndexPage({
       <div className="sort-control" aria-label="Sort records">
         <span>Sort</span>
         <Link className={sort === "date" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=date`}>Recently updated</Link>
-        <Link className={sort === "alpha" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=alpha`}>A–Z</Link>
+        {kind === "fixture" ? <>
+          <Link className={sort === "manufacturer" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=manufacturer`}>Manufacturer</Link>
+          <Link className={sort === "type" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=type`}>Type</Link>
+          <Link className={sort === "name" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=name`}>Fixture name</Link>
+        </> : <Link className={sort === "alpha" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=alpha`}>A–Z</Link>}
         {kind === "location" && <Link className={sort === "city" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=city`}>City</Link>}
       </div>
       {mayReviewArchive && <Link className="secondary-button" href={showArchived ? `${browseRoute}?sort=${sort}` : `${browseRoute}?view=archived&sort=${sort}`}>{showArchived ? "Current records" : "Archived"}</Link>}

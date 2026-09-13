@@ -117,6 +117,9 @@ export function ContentEditor({
           const error = state.fieldErrors?.[field.name];
           const value = record?.[field.name];
           const className = field.wide ? "form-field form-field--wide" : "form-field";
+          const selectOptions = field.options ?? [];
+          const existingSelectValue = typeof value === "string" ? value : "";
+          const hasLegacySelectValue = Boolean(existingSelectValue && !selectOptions.some((option) => option.value === existingSelectValue));
           return (
             <label className={className} key={field.name}>
               <span>{field.label}{field.required && <em> required</em>}</span>
@@ -127,7 +130,10 @@ export function ContentEditor({
               ) : kind === "link" && field.name === "subcollection_id" ? (
                 <select name={field.name} value={subcollection} onChange={(event) => setSubcollection(event.target.value)} aria-invalid={Boolean(error)}>{field.options?.filter((option) => !option.value || referenceCollection(option.value)?.parent_id === collection).map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select>
               ) : field.type === "select" ? (
-                <select name={field.name} defaultValue={typeof value === "string" ? value : field.options?.[0]?.value} aria-invalid={Boolean(error)}>{field.options?.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select>
+                <select name={field.name} defaultValue={existingSelectValue || selectOptions[0]?.value} aria-invalid={Boolean(error)}>
+                  {hasLegacySelectValue && <option value={existingSelectValue}>{existingSelectValue} (existing value)</option>}
+                  {selectOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                </select>
               ) : field.type === "checkbox" ? (
                 <span className="check-control"><input name={field.name} type="checkbox" value="true" defaultChecked={value === true} /> Yes</span>
               ) : (

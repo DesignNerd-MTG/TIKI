@@ -82,7 +82,7 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   if (kind === "link" && existing && !String(input.date_added ?? "").trim()) {
     input.date_added = String(existing.date_added || existing.created_at);
   }
-  const validation = validateContentInput(kind, profile.role, input, existing?.status);
+  const validation = validateContentInput(kind, profile.role, input, existing?.status, existing ?? undefined);
   if (!validation.valid) return { ok: false, message: validation.message, fieldErrors: validation.fieldErrors };
   const additionalLinks = readAdditionalLinks(formData, kind);
   if (!additionalLinks.valid) return { ok: false, message: "Check the additional links and try again.", fieldErrors: { additional_links: additionalLinks.message } };

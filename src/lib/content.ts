@@ -6,6 +6,31 @@ export const napkinStatuses = ["raw", "needs_review", "converted", "archived"] a
 export const filingDestinationKinds = ["fixture", "show", "link", "location", "drink"] as const;
 export type FilingDestinationKind = (typeof filingDestinationKinds)[number];
 
+export const fixtureTypeOptions = [
+  "Mover Spot",
+  "Mover Wash",
+  "Mover Profile",
+  "Mover Strip",
+  "Mover FX",
+  "Gimmick/FX Light",
+  "LED Striplight",
+  "LED Leko",
+  "LED Fresnel",
+  "LED Soft",
+  "LED Brick/Wash",
+  "LED PAR",
+  "LED Space",
+  "LED Strobe/Blinder",
+  "Conventional Striplight",
+  "Conventional Leko",
+  "Conventional Fresnel",
+  "Conventional Soft",
+  "Conventional Brick/Wash",
+  "Conventional PAR",
+  "Conventional Space",
+  "Conventional Strobe/Blinder",
+].map((value) => ({ value, label: value }));
+
 const countryDisplayNames = new Intl.DisplayNames(["en"], { type: "region" });
 const countryCodes = `AF AL DZ AD AO AG AR AM AU AT AZ BS BH BD BB BY BE BZ BJ BT BO BA BW BR BN BG BF BI CV KH CM CA CF TD CL CN CO KM CG CD CR CI HR CU CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FJ FI FR GA GM GE DE GH GR GD GT GN GW GY HT HN HU IS IN ID IR IQ IE IL IT JM JP JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MG MW MY MV ML MT MH MR MU MX FM MD MC MN ME MA MZ MM NA NR NP NL NZ NI NE NG MK NO OM PK PW PS PA PG PY PE PH PL PT QA RO RU RW KN LC VC WS SM ST SA SN RS SC SL SG SK SI SB SO ZA SS ES LK SD SR SE CH SY TW TJ TZ TH TL TG TO TT TN TR TM TV UG UA AE GB UY UZ VU VA VE VN YE ZM ZW XK`.split(" ");
 
@@ -70,7 +95,10 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
     fields: [
       { name: "name", label: "Fixture name", type: "text", required: true, maxLength: 160 },
       { name: "manufacturer", label: "Manufacturer", type: "text", maxLength: 120 },
-      { name: "fixture_type", label: "Fixture type", type: "text", maxLength: 120 },
+      { name: "fixture_type", label: "Fixture type", type: "select", required: true, options: [
+        { value: "", label: "Choose a fixture type" },
+        ...fixtureTypeOptions,
+      ] },
       { name: "preferred_mode", label: "LDG preferred mode", type: "text", maxLength: 160 },
       { name: "dmx_footprint", label: "DMX Footprint in Preferred Mode", type: "number", help: "Positive channel count." },
       { name: "power_note", label: "Power notes", type: "textarea", maxLength: 4000, wide: true },
@@ -79,6 +107,7 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
       { name: "fixture_page_url", label: "Fixture Page Link", type: "url", placeholder: "https://…" },
       { name: "manual_url", label: "Manual Link", type: "url", placeholder: "https://…" },
       { name: "dmx_chart_url", label: "DMX Chart Link", type: "url", placeholder: "https://…" },
+      { name: "ies_url", label: "IES File Link", type: "url", placeholder: "https://…" },
       { name: "showfile_url", label: "Link to Showfile with Fixture Included", type: "url", placeholder: "https://…", wide: true },
     ],
   },

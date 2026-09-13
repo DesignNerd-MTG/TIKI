@@ -3,7 +3,7 @@ import type { EntityKind } from "./types.ts";
 
 export const additionalLinkSections = {
   fixture: [
-    { key: "fixture", title: "Additional links", description: "Keep unusual fixture resources here until they earn a permanent field." },
+    { key: "fixture", title: "Additional fixture links", description: "Add firmware, photometrics, CAD files, manufacturer downloads, or any other useful fixture resource." },
   ],
   show: [
     { key: "show_files", title: "Additional show links", description: "General or legacy show files that are not specifically Dropbox or Egnyte." },
