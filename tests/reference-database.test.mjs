@@ -12,7 +12,8 @@ async function as(role){await db.exec("reset role");await db.query("select set_c
 const manifest=[{import_source:"notion:aaaaaaaaaaaa4aaa8aaaaaaaaaaaaaaa",label:"Imported resource",url:"https://www.etcconnect.com",description:"Old source",date_added:"2022-03-04T10:30:00Z",collection_id:"control-systems",subcollection_id:null,category:"Control Systems",tags:["console"],link_health:"redirected",site_name:"Lighting maker",final_url:"https://www.etcconnect.com/new",last_checked_at:"2026-09-13T00:00:00Z"}];
 
 before(async()=>{
-  await db.exec(`create role authenticated; create role anon; create schema auth;
+  await db.exec(`create role authenticated; create role anon; create role service_role; create schema auth;
+    alter default privileges grant execute on functions to anon, authenticated, service_role;
     create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}'::jsonb);
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     grant usage on schema auth,public to authenticated,anon;
@@ -47,6 +48,40 @@ before(async()=>{
 });
 after(async()=>{await db.close();});
 describe("Reference PostgreSQL migration and RLS",()=>{
+  it("denies anonymous function execution even with a forged subject and Supabase default grants",async()=>{
+    await db.exec("reset role");
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)",[ids.admin]);
+    await db.exec("set role anon");
+    for(const sql of ["select * from public.social_account_targets()",`select public.social_account_target_active('${ids.viewer}')`]) {
+      await assert.rejects(()=>db.query(sql),error=>error.code==='42501' && /permission denied for function/.test(error.message));
+    }
+    await db.exec("reset role");
+    for(const signature of ['public.social_account_targets()','public.social_account_target_active(uuid)']) {
+      for(const role of ['anon','service_role','authenticated']) {
+        assert.equal((await db.query("select has_function_privilege($1,$2,'EXECUTE') allowed",[role,signature])).rows[0].allowed,role==='authenticated');
+      }
+      const fn=(await db.query("select prosecdef,proconfig,pg_get_userbyid(proowner) owner from pg_proc where oid=$1::regprocedure",[signature])).rows[0];
+      assert.equal(fn.prosecdef,true);assert.ok(fn.proconfig.includes('search_path=""'));
+      assert.equal((await db.query("select count(*)::int n from pg_proc p, lateral aclexplode(p.proacl) a where p.oid=$1::regprocedure and a.grantee=0",[signature])).rows[0].n,0);
+      assert.equal((await db.query("select has_function_privilege($1,$2,'EXECUTE') allowed",[fn.owner,signature])).rows[0].allowed,true);
+    }
+  });
+  it("grant hardening is repeatable and preserves data, all policies, table definitions and function security",async()=>{
+    await db.exec("reset role");
+    const snapshot=async()=>{
+      const tables=(await db.query("select tablename from pg_tables where schemaname='public' order by tablename")).rows;
+      const data=[];
+      for(const {tablename} of tables) data.push((await db.query(`select to_jsonb(t) row from public."${tablename}" t order by to_jsonb(t)::text`)).rows);
+      return {data,policies:(await db.query("select * from pg_policies where schemaname='public' order by tablename,policyname")).rows,
+        columns:(await db.query("select * from information_schema.columns where table_schema='public' order by table_name,ordinal_position")).rows,
+        functions:(await db.query("select proname,proowner,prosecdef,proconfig,prosrc from pg_proc where pronamespace='public'::regnamespace order by oid")).rows};
+    };
+    await db.exec("grant execute on function public.social_account_targets(), public.social_account_target_active(uuid) to public, anon, service_role");
+    const before=await snapshot();
+    const migration=await readFile(new URL('../supabase/migrations/202609140003_social_function_grants.sql',import.meta.url),'utf8');
+    await db.exec(migration);await db.exec(migration);
+    assert.deepEqual(await snapshot(),before);
+  });
   it("adds the LDG collection idempotently without changing existing taxonomy or links",async()=>{
     await db.exec("reset role");
     const before=(await db.query("select * from public.reference_collections order by id")).rows;
