@@ -17,6 +17,8 @@ The migration is transactional and additive:
 
 No paid Supabase features, service-role keys, storage buckets, new environment variables, scheduled jobs, or permanent Notion integration are required. Deploy the application only after its database migration is applied; otherwise the hub reports a database setup notice. This SQL is a migration, not a repeatedly runnable seed script. If the application must be rolled back, leave the additive database columns/tables in place rather than deleting content.
 
+The reviewed forward migration preserves exact historical `updated_at` values by disabling only `links_set_updated_at` during the locked, transactional backfill and re-enabling it before commit. Future edits still fire the normal trigger. Child collections explicitly require a non-null `parent_depth` of zero, including when inserted outside the interface. This is the clean forward path for a database that has not yet received the migration; it does not repair previously overwritten timestamps.
+
 ## Using the hub
 
 - Open `/links` for collections, counts, an Unsorted inbox, reference-only search, and recent reference cards. Collection/subcollection filters use query parameters so existing `/links/[id]` links stay valid. Lists paginate in batches of 50.
@@ -34,6 +36,8 @@ Checks run server-side on explicit create/save/recheck and one-time import, neve
 
 Normal HTML title/favicon and Open Graph/Twitter metadata are parsed as bounded inert strings, never executed. Images are loaded through an authenticated route using the same network guards, a 1 MiB limit, raster/icon MIME allowlist, `nosniff`, private caching, and no SVG/HTML execution. Image checks happen only when requested by the visible interface, not through a crawler.
 
+Fetched strings are made well-formed Unicode, stripped of NUL, and truncated by code point rather than splitting surrogate pairs. This protects PostgreSQL text/JSON persistence for titles, site names, asset metadata, and final URLs without changing network validation. Failed enrichment still produces a saveable unverified result.
+
 Health states:
 
 | State | Meaning |
@@ -48,6 +52,8 @@ Original URLs are retained even after redirects. An inconclusive fetch does not 
 ## One-time Notion import
 
 An admin opens `/links/import`, pastes a structured JSON manifest, and chooses **Validate manifest** before **Import next batch as drafts**. The manifest limit is 100 rows / 250 KB. Each import click skips known source IDs, safely checks at most ten new references (five concurrently), and atomically saves that batch. Submit the same manifest again until the report says zero complete rows remain. Repeated imports never overwrite subsequent human edits, metadata, status, dates, or tags.
+
+The manifest stays in ordinary component state across validation, successful batches, and errors; it does not need to be pasted again between actions. Navigating away/reloading discards it. No browser storage is used.
 
 See `docs/reference-hub-manifest.example.json` for synthetic input; do not import it into production. Each real bookmark supplies:
 

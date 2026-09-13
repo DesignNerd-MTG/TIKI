@@ -90,4 +90,22 @@ describe("Reference metadata and SSRF boundary", () => {
     assert.equal((await checkReference("https://public.com",dependencies(async()=>{throw new Error("network");}))).link_health,"could_not_verify");
     assert.equal((await checkReference("https://public.com",dependencies(async()=>reply()))).link_health,"healthy");
   });
+  it("truncates title and site names by Unicode code point without splitting emoji",()=>{
+    const result=extractMetadata('<title>'+"a".repeat(499)+'😀extra</title><meta property="og:site_name" content="'+"b".repeat(199)+'𐐀extra">',"https://public.com");
+    assert.equal(result.fetched_title,"a".repeat(499)+"😀");
+    assert.equal(result.site_name,"b".repeat(199)+"𐐀");
+    for (const value of Object.values(result).filter(Boolean)) assert.equal(value.isWellFormed(),true);
+  });
+  it("sanitizes NUL and malformed surrogates consistently in text and asset metadata",async()=>{
+    const result=extractMetadata('<meta property="og:title" content="Bad &#xD800;\0 title"><meta property="og:site_name" content="Name\uDC00\0"><link rel="icon" href="/\uD800\0.ico"><meta property="og:image" content="/&#xDFFF;\0.png">',"https://public.com");
+    assert.equal(result.fetched_title,"Bad � title");
+    for (const value of Object.values(result).filter(Boolean)) {
+      assert.equal(value.isWellFormed(),true); assert.equal(value.includes("\0"),false);
+    }
+    assert.ok(result.favicon_url); assert.ok(result.preview_image_url);
+    let calls=0;
+    const checked=await checkReference("https://public.com",dependencies(async()=>++calls===1?reply(302,{location:"/😀"}):reply()));
+    assert.equal(checked.final_url,"https://public.com/%F0%9F%98%80");
+    assert.equal(checked.final_url.isWellFormed(),true);
+  });
 });

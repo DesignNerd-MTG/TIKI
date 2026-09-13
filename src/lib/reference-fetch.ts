@@ -115,14 +115,21 @@ export async function safeFetch(value: string, dependencies = defaults, limit = 
   finally { clearTimeout(timer); controller.abort(); }
 }
 
+function metadataText(value: string, limit: number) {
+  // PostgreSQL text/JSON cannot contain NUL or unpaired UTF-16 surrogates.
+  // Count Unicode code points so truncation never splits supplementary characters.
+  return Array.from(value.toWellFormed().replaceAll("\0", "")).slice(0, limit).join("");
+}
+
 function decode(value: string) {
-  return value.replace(/&(?:amp|quot|apos|lt|gt|#39|#(\d+)|#x([0-9a-f]+));/gi, (match, decimal, hex) => {
+  const decoded = value.replace(/&(?:amp|quot|apos|lt|gt|#39|#(\d+)|#x([0-9a-f]+));/gi, (match, decimal, hex) => {
     if (decimal || hex) {
       const code = Number.parseInt(decimal || hex, hex ? 16 : 10);
       return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : "";
     }
     return ({ "&amp;": "&", "&quot;": '"', "&apos;": "'", "&lt;": "<", "&gt;": ">", "&#39;": "'" } as Record<string, string>)[match.toLowerCase()] ?? match;
-  }).replace(/\s+/g, " ").trim().slice(0, 2048);
+  }).replace(/\s+/g, " ").trim();
+  return metadataText(decoded, 2048);
 }
 
 export function extractMetadata(html: string, finalUrl: string) {
@@ -139,11 +146,11 @@ export function extractMetadata(html: string, finalUrl: string) {
   }
   function asset(value: string) {
     if (!value) return null;
-    try { return parseFetchUrl(new URL(value, finalUrl).href).href; } catch { return null; }
+    try { return metadataText(parseFetchUrl(new URL(value, finalUrl).href).href, 2048); } catch { return null; }
   }
   return {
-    site_name: (values.get("og:site_name") || new URL(finalUrl).hostname).slice(0, 200),
-    fetched_title: (values.get("og:title") || values.get("twitter:title") || decode(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "")).slice(0, 500) || null,
+    site_name: metadataText(values.get("og:site_name") || new URL(finalUrl).hostname, 200),
+    fetched_title: metadataText(values.get("og:title") || values.get("twitter:title") || decode(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? ""), 500) || null,
     favicon_url: asset(favicon || "/favicon.ico"),
     preview_image_url: asset(values.get("og:image") || values.get("twitter:image") || ""),
   };
@@ -160,7 +167,7 @@ export async function checkReference(value: string, dependencies = defaults) {
       ...empty,
       ...(success && /text\/html|application\/xhtml\+xml/i.test(contentType) ? extractMetadata(reply.body.toString("utf8"), reply.finalUrl) : {}),
       ...checked,
-      final_url: reply.finalUrl,
+      final_url: metadataText(reply.finalUrl, 2048),
       link_health: success ? (reply.redirected ? "redirected" : "healthy") : [404, 410].includes(reply.status) ? "unavailable" : "could_not_verify",
     };
   } catch {

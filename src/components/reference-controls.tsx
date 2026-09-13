@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { importNotionAction, recheckReferenceAction, saveSocialLinkAction } from "@/app/(portal)/links/reference-actions";
 import type { ContentActionState } from "@/app/(portal)/content-actions";
@@ -14,8 +14,9 @@ export function RecheckReference({ id }: { id: string }) {
 }
 
 export function NotionImportForm() {
+  const [manifest, setManifest] = useState("");
   const [state, action, pending] = useActionState(importNotionAction, initial);
-  return <form action={action} className="content-form"><label className="form-field"><span>Notion manifest JSON</span><textarea name="manifest" rows={16} maxLength={250000} required /></label>
+  return <form action={action} className="content-form"><label className="form-field"><span>Notion manifest JSON</span><textarea name="manifest" value={manifest} onChange={(event) => setManifest(event.target.value)} rows={16} maxLength={250000} required /></label>
     <p>Validate first. Each import saves up to 10 complete references as drafts and checks their links. Submit the same manifest again to continue; existing imports are skipped.</p>
     <div className="page-actions"><button className="secondary-button" name="mode" value="preview" disabled={pending}>Validate manifest</button><button className="primary-button" name="mode" value="import" disabled={pending}>{pending ? "Working…" : "Import next batch as drafts"}</button></div>
     {state.message && <pre className="reference-import-report" role="status">{state.message}</pre>}</form>;

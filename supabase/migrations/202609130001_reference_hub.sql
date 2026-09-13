@@ -10,7 +10,7 @@ create table public.reference_collections (
   unique (id, depth),
   unique (id, parent_id),
   check ((depth = 0 and parent_id is null and parent_depth is null) or
-         (depth = 1 and parent_id is not null and parent_depth = 0)),
+         (depth = 1 and parent_id is not null and parent_depth is not null and parent_depth = 0)),
   foreign key (parent_id, parent_depth) references public.reference_collections(id, depth)
 );
 insert into public.reference_collections (id,name,description,parent_id,depth,parent_depth) values
@@ -52,6 +52,9 @@ alter table public.link_items
   add constraint reference_subcollection foreign key (subcollection_id, collection_id)
     references public.reference_collections(id, parent_id);
 -- Do not rewrite created_at or the legacy category. Preserve native history.
+-- ALTER TABLE holds its lock until commit; no application edits can interleave.
+-- Disable only this timestamp trigger for the backfill, restoring it in this transaction.
+alter table public.link_items disable trigger links_set_updated_at;
 update public.link_items set date_added = created_at where date_added is null;
 alter table public.link_items alter column date_added set default now(), alter column date_added set not null;
 update public.link_items set collection_id = case category
@@ -61,6 +64,7 @@ update public.link_items set collection_id = case category
   when 'Misc' then 'bucket-fun' when 'Articles' then 'press-room'
   when 'Inspiration' then 'inspiration' when 'Utility' then 'software-utilities'
   when 'Useful Products' then 'useful-products' else 'unsorted' end;
+alter table public.link_items enable trigger links_set_updated_at;
 create index reference_collection_date_idx on public.link_items(collection_id, date_added desc);
 create index reference_subcollection_idx on public.link_items(subcollection_id);
 comment on column public.link_items.date_added is 'Original source date for imports; created_at for native references.';

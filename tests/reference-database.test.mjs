@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { before, after, describe, it } from "node:test";
 import { readFile, readdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
+import { checkReference } from "../src/lib/reference-fetch.ts";
 
 const db=new PGlite();
 const ids={admin:"11111111-1111-4111-8111-111111111111",editor:"22222222-2222-4222-8222-222222222222",contributor:"33333333-3333-4333-8333-333333333333",viewer:"44444444-4444-4444-8444-444444444444",pending:"55555555-5555-4555-8555-555555555555"};
@@ -23,7 +24,7 @@ before(async()=>{
         await db.query("insert into auth.users(id,email) values($1,$2)",[id,role+"@test.invalid"]);
         await db.query("update public.profiles set role=$1::public.app_role,active=$2 where id=$3",[role==="pending"?"viewer":role,role!=="pending",id]);
       }
-      const result=await db.query("insert into public.link_items(label,url,category,status,created_by,created_at) values('Legacy link','https://public.com','Drafting','published',$1,'2020-01-01T12:30:00Z') returning id",[ids.admin]);
+      const result=await db.query("insert into public.link_items(label,url,category,status,created_by,created_at,updated_at) values('Legacy link','https://public.com','Drafting','published',$1,'2020-01-01T12:30:00.123456Z','2021-02-03T04:05:06.654321Z') returning id",[ids.admin]);
       legacyId=result.rows[0].id;
     }
     await db.exec(await readFile(new URL(name,directory),"utf8"));
@@ -34,10 +35,12 @@ describe("Reference PostgreSQL migration and RLS",()=>{
   it("backfills dates without losing legacy records or editability",async()=>{
     await as("admin");
     const row=(await db.query("select * from public.link_items where id=$1",[legacyId])).rows[0];
-    assert.equal(new Date(row.date_added).toISOString(),"2020-01-01T12:30:00.000Z");
+    const exact=(await db.query("select created_at = '2020-01-01T12:30:00.123456Z'::timestamptz as created_preserved, updated_at = '2021-02-03T04:05:06.654321Z'::timestamptz as updated_preserved, date_added = created_at as date_preserved from public.link_items where id=$1",[legacyId])).rows[0];
+    assert.deepEqual(exact,{created_preserved:true,updated_preserved:true,date_preserved:true});
     assert.equal(row.collection_id,"drafting");
     await db.query("update public.link_items set label='Legacy edited' where id=$1",[legacyId]);
     assert.equal((await db.query("select label from public.link_items where id=$1",[legacyId])).rows[0].label,"Legacy edited");
+    assert.deepEqual((await db.query("select updated_at > '2021-02-03T04:05:06.654321Z'::timestamptz as advanced, date_added = created_at as preserved from public.link_items where id=$1",[legacyId])).rows[0],{advanced:true,preserved:true});
   });
   it("enforces one nesting level and matching collection/subcollection in PostgreSQL",async()=>{
     await as("admin");
@@ -46,6 +49,13 @@ describe("Reference PostgreSQL migration and RLS",()=>{
     await assert.rejects(()=>db.query("update public.link_items set collection_id='consoles',subcollection_id=null where id=$1",[legacyId]));
     await db.exec("reset role");
     await assert.rejects(()=>db.exec("insert into public.reference_collections values('too-deep','Deep','No','consoles',1,0)"));
+  });
+  it("rejects NULL hierarchy bypasses while allowing a root and one child",async()=>{
+    await db.exec("reset role");
+    await db.exec("insert into public.reference_collections values('test-root','Root','Test',null,0,null),('test-child','Child','Test','test-root',1,0)");
+    for (const [parent,depth,parentDepth] of [["test-root",1,null],["test-root",1,1],["test-child",1,null],["test-child",1,0],["test-child",2,1],[null,1,0],["test-root",0,null]]) {
+      await assert.rejects(()=>db.query("insert into public.reference_collections values('invalid-child','Invalid','Test',$1,$2,$3)",[parent,depth,parentDepth]));
+    }
   });
   it("preserves publication rules and filters collection counts/search through RLS",async()=>{
     await as("contributor");
@@ -89,5 +99,19 @@ describe("Reference PostgreSQL migration and RLS",()=>{
     const rows=(await db.query("select * from public.social_directory()")).rows;
     assert.equal(rows.length,1); assert.deepEqual(Object.keys(rows[0]).sort(),["display_name","id","label","profile_id","url"].sort());
     await as("pending"); assert.equal((await db.query("select * from public.social_directory()")).rows.length,0);
+  });
+  it("persists Unicode boundary metadata and imports failed enrichment without losing references",async()=>{
+    await as("admin");
+    const metadata=await checkReference("https://public.com",{
+      resolve:async()=>[{address:"93.184.216.34",family:4}],
+      request:async()=>({status:200,headers:{"content-type":"text/html"},body:Buffer.from('<title>'+"a".repeat(499)+'😀</title><meta property="og:site_name" content="'+"b".repeat(199)+'😀&#xD800;\0">')}),
+    });
+    await db.query("select $1::jsonb",[JSON.stringify(metadata)]);
+    await db.query("update public.link_items set fetched_title=$1,site_name=$2 where id=$3",[metadata.fetched_title,metadata.site_name,legacyId]);
+    const failed=await checkReference("https://public.com",{resolve:async()=>{throw new Error("DNS failed");},request:async()=>assert.fail("No request after DNS failure")});
+    const batch=[{...manifest[0],...metadata,import_source:"notion:cccccccccccc4ccc8ccccccccccccccc"},{...manifest[0],...failed,import_source:"notion:dddddddddddd4ddd8ddddddddddddddd"}];
+    const results=(await db.query("select * from public.import_notion_references($1)",[JSON.stringify(batch)])).rows;
+    assert.deepEqual(results.map(r=>r.outcome),["imported","imported"]);
+    assert.equal((await db.query("select link_health from public.link_items where import_source=$1",[batch[1].import_source])).rows[0].link_health,"could_not_verify");
   });
 });
