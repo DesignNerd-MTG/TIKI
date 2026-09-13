@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
 import { checkReference } from "@/lib/reference-fetch";
 import { findSimilarManufacturers, slugifyManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
+import { napkinSketchBucket, napkinSketchPath, normalizeNapkinSketch } from "@/lib/napkin-sketch";
 
 export type ContentActionState = {
   ok: boolean;
@@ -129,6 +130,9 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   }
 
   const input = readInput(formData, kind);
+  const sketchFile = kind === "napkin" && !existing ? formData.get("sketch") : null;
+  const hasNewSketch = sketchFile instanceof File && sketchFile.size > 0;
+  if (kind === "napkin") input._has_sketch = hasNewSketch ? "true" : "false";
   if (kind === "link" && existing && !String(input.date_added ?? "").trim()) {
     input.date_added = String(existing.date_added || existing.created_at);
   }
@@ -138,6 +142,14 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   if (!additionalLinks.valid) return { ok: false, message: "Check the additional links and try again.", fieldErrors: { additional_links: additionalLinks.message } };
 
   const payload: Record<string, unknown> = { ...validation.payload };
+  let sketchBytes: Uint8Array | null = null;
+  if (hasNewSketch && sketchFile instanceof File) {
+    try {
+      sketchBytes = await normalizeNapkinSketch(new Uint8Array(await sketchFile.arrayBuffer()), sketchFile.type);
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : "The sketch could not be processed.", fieldErrors: { sketch: "Draw the sketch again and retry." } };
+    }
+  }
   if (kind === "fixture") {
     const manufacturerId = String(formData.get("manufacturer_id") ?? "").trim();
     const unchangedUnresolved = Boolean(existing && !existing.manufacturer_id && String(existing.manufacturer ?? "") === String(payload.manufacturer ?? ""));
@@ -165,10 +177,23 @@ export async function saveContentAction(_previous: ContentActionState, formData:
     if (kind === "fixture") payload.last_verified_at = new Date().toISOString();
   }
 
+  let uploadedSketchPath: string | null = null;
+  if (!existing && kind === "napkin" && sketchBytes) {
+    const napkinId = crypto.randomUUID();
+    uploadedSketchPath = napkinSketchPath(identity.id, napkinId);
+    payload.id = napkinId;
+    payload.sketch_path = uploadedSketchPath;
+    const upload = await supabase.storage.from(napkinSketchBucket).upload(uploadedSketchPath, sketchBytes, { contentType: "image/png", cacheControl: "0", upsert: false });
+    if (upload.error) return { ok: false, message: `The sketch could not be stored. ${upload.error.message}`, fieldErrors: { sketch: "Try drawing or storing the sketch again." } };
+  }
+
   const result = existing
     ? await supabase.from(config.table).update(payload).eq("id", existing.id).select("id").single()
     : await supabase.from(config.table).insert(payload).select("id").single();
-  if (result.error || !result.data) return { ok: false, message: `T.I.K.I. could not save this ${config.singular.toLowerCase()}. ${result.error?.message ?? "Try again."}` };
+  if (result.error || !result.data) {
+    if (uploadedSketchPath) await supabase.storage.from(napkinSketchBucket).remove([uploadedSketchPath]);
+    return { ok: false, message: `T.I.K.I. could not save this ${config.singular.toLowerCase()}. ${result.error?.message ?? "Try again."}` };
+  }
 
   const recordId = String(result.data.id);
   const [tagError, additionalLinkError] = await Promise.all([

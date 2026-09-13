@@ -19,6 +19,7 @@ import { referenceCollection, type ReferenceCollectionRow } from "@/lib/referenc
 import { canAddFixtureManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
 import { FixtureCreate } from "@/components/fixture-create";
 import { fixtureQuickSpecs, formatFixtureWeight } from "@/lib/fixture-physical";
+import { NapkinSketch } from "@/components/napkin-sketch";
 
 function stringify(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -229,6 +230,8 @@ export async function ContentDetailPage({
       {filingDestination && <div className="notice notice--success">Filed as <Link href={filingDestination.href}>{filingDestination.config.singular}: open the published record</Link>.</div>}
 
       {canFileNapkin && <FileNapkinControl id={id} suggestedTitle={title} hasSourceUrl={Boolean(stringify(record.source_url))} collections={(collectionsResult.data ?? []) as ReferenceCollectionRow[]} />}
+
+      {kind === "napkin" && typeof record.sketch_path === "string" && record.sketch_path && <NapkinSketch id={id} version={record.updated_at} />}
 
       <div className="detail-columns">
         <section className="panel detail-panel">

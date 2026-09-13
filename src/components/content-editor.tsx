@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Archive, PencilLine, Plus, Save, Trash2 } from "lucide-react";
+import { Archive, Download, PencilLine, Plus, Save, Trash2 } from "lucide-react";
 
 import { archiveContentAction, deleteContentAction, fileNapkinAction, saveContentAction, type ContentActionState } from "@/app/(portal)/content-actions";
 import { sectionsForKind, type AdditionalLink, type AdditionalLinkSection } from "@/lib/additional-links";
@@ -12,6 +12,7 @@ import type { EntityKind, ManagedRecord } from "@/lib/types";
 import { flatReferenceDestinations, referenceCollection, type ReferenceCollectionRow } from "@/lib/references";
 import { ManufacturerSelector } from "@/components/manufacturer-selector";
 import type { FixtureManufacturer } from "@/lib/fixture-manufacturers";
+import { SketchPad, type SketchPadHandle } from "@/components/sketch-pad";
 
 function SubmitButton({ create, label }: { create: boolean; label?: string }) {
   const { pending } = useFormStatus();
@@ -106,6 +107,8 @@ export function ContentEditor({
   const config = contentConfigs[kind];
   const [collection, setCollection] = useState(String(record?.collection_id ?? "unsorted"));
   const [subcollection, setSubcollection] = useState(String(record?.subcollection_id ?? ""));
+  const sketchPadRef = useRef<SketchPadHandle>(null);
+  const [hasSketch, setHasSketch] = useState(false);
   const showStatusControl = kind !== "napkin" || Boolean(record && statuses.length > 1);
   const displayStatuses = kind === "napkin" && record?.status !== "converted" ? statuses.filter((status) => status !== "converted") : statuses;
   const router = useRouter();
@@ -131,11 +134,13 @@ export function ContentEditor({
           const selectOptions = field.options ?? [];
           const existingSelectValue = typeof value === "string" ? value : "";
           const hasLegacySelectValue = Boolean(existingSelectValue && !selectOptions.some((option) => option.value === existingSelectValue));
-          return (
+          const fieldLabel = kind === "napkin" && !record && field.name === "source_url" ? "Link" : field.label;
+          const fieldHelp = kind === "napkin" && !record && field.name === "source_url" ? "Optional — add a related link." : field.help;
+          const fieldControl = (
             <label className={className} key={field.name}>
-              <span>{field.label}{field.required && <em> required</em>}</span>
+              <span>{fieldLabel}{field.required && <em> required</em>}</span>
               {field.type === "textarea" ? (
-                <textarea name={field.name} defaultValue={typeof value === "string" ? value : ""} maxLength={field.maxLength} rows={field.name === "body" ? 7 : 4} aria-invalid={Boolean(error)} autoFocus={!record && index === 0} />
+                <textarea name={field.name} defaultValue={typeof value === "string" ? value : ""} maxLength={field.maxLength} rows={field.name === "body" ? 6 : 4} aria-invalid={Boolean(error)} autoFocus={!record && index === 0} />
               ) : kind === "link" && field.name === "collection_id" ? (
                 <select name={field.name} value={collection} onChange={(event) => { setCollection(event.target.value); setSubcollection(""); }}>{field.options?.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select>
               ) : kind === "link" && field.name === "subcollection_id" ? (
@@ -156,10 +161,13 @@ export function ContentEditor({
               ) : (
                 <input name={field.name} type={field.type} step={field.name === "weight_lb" ? "any" : undefined} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} required={field.required} maxLength={field.maxLength} placeholder={field.placeholder} aria-invalid={Boolean(error)} autoFocus={!record && index === 0} />
               )}
-              {field.help && <small>{field.help}</small>}
+              {fieldHelp && <small>{fieldHelp}</small>}
               {error && <small className="field-error">{error}</small>}
             </label>
           );
+          return kind === "napkin" && !record && field.name === "source_url"
+            ? <div className="napkin-capture__link-sketch" key={field.name}>{fieldControl}<SketchPad ref={sketchPadRef} embedded inputName="sketch" onMeaningfulChange={setHasSketch} />{state.fieldErrors?.sketch && <small className="field-error">{state.fieldErrors.sketch}</small>}</div>
+            : fieldControl;
         })}
 
         <AdditionalLinksEditor kind={kind} initialLinks={additionalLinks} error={state.fieldErrors?.additional_links} />
@@ -190,7 +198,10 @@ export function ContentEditor({
           {state.fieldErrors?.revision_note && <small className="field-error">{state.fieldErrors.revision_note}</small>}
         </label>}
       </div>
-      <div className="content-form__actions"><SubmitButton create={!record} label={kind === "napkin" && !record ? "Store Napkin" : undefined} /></div>
+      <div className={`content-form__actions ${kind === "napkin" && !record ? "napkin-capture-actions" : ""}`}>
+        <SubmitButton create={!record} label={kind === "napkin" && !record ? "Store Napkin" : undefined} />
+        {kind === "napkin" && !record && <button className="secondary-button" type="button" disabled={!hasSketch} onClick={() => sketchPadRef.current?.saveToDevice()}><Download size={16} /> Save sketch to device</button>}
+      </div>
     </form>
   );
 }

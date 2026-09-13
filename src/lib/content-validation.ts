@@ -76,8 +76,12 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
         else payload[field.name] = number;
       }
     } else {
-      payload[field.name] = value || null;
+      payload[field.name] = kind === "napkin" && field.name === "body" ? value : value || null;
     }
+  }
+
+  if (kind === "napkin" && !String(payload.body ?? "").trim() && input._has_sketch !== "true" && !previousRecord?.sketch_path) {
+    errors.body = "Add text or draw a sketch before storing this Napkin.";
   }
 
   const status = String(input.status ?? (kind === "napkin" ? "raw" : "draft"));

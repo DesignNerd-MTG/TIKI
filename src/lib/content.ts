@@ -246,7 +246,7 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
     eyebrow: "Working knowledge", description: "A forgiving landing place for useful information that is not clean, classified, or verified yet.",
     minimumCreateRole: "viewer", titleField: "body",
     fields: [
-      { name: "body", label: "What should we remember?", type: "textarea", required: true, maxLength: 4000, wide: true },
+      { name: "body", label: "What should we remember?", type: "textarea", maxLength: 4000, wide: true },
       { name: "source_url", label: "Source URL", type: "url", placeholder: "https://…", wide: true },
       { name: "urgent", label: "Mark important", type: "checkbox" },
     ],
@@ -255,7 +255,7 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
 
 export function getRecordTitle(kind: EntityKind, record: Record<string, unknown>) {
   const value = record[contentConfigs[kind].titleField];
-  const title = typeof value === "string" ? value : "Untitled";
+  const title = typeof value === "string" && value.trim() ? value : kind === "napkin" && record.sketch_path ? "Sketch Napkin" : "Untitled";
   return kind === "napkin" && title.length > 92 ? `${title.slice(0, 92)}…` : title;
 }
 

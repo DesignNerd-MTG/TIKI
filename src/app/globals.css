@@ -25,7 +25,7 @@
 .reference-list h2 { grid-column: 1; grid-row: 1; }
 .reference-list .reference-card__site { grid-column: 2; grid-row: 1; }
 @media(max-width: 600px) { .reference-list .reference-card__body { grid-template-columns: minmax(0, 1fr); } .reference-list .reference-card__site { grid-column: 1; grid-row: 2; } }
-.sidebar__version { opacity: .7; font-size: 11px; }
+.sidebar__version { display: block; margin: 0 10px 9px; color: var(--sidebar-faint); font-size: 9px; font-weight: 700; letter-spacing: .04em; }
 .social-accounts { list-style: none; padding: 0; display: grid; gap: 18px; }
 .social-accounts li > div:first-child { display: flex; flex-wrap: wrap; gap: 12px; overflow-wrap: anywhere; }
 .social-account-controls { display: flex; flex-wrap: wrap; align-items: start; gap: 8px; margin-top: 8px; }
@@ -1373,6 +1373,7 @@ select:focus-visible {
 .nav-link--child { min-height: 35px; padding-left: 10px; font-size: 11px; }
 
 .sidebar__footer {
+  flex: 0 0 auto;
   padding: 14px 19px 16px;
   border-top: 1px solid var(--sidebar-border);
 }
@@ -1520,9 +1521,6 @@ select:focus-visible {
 }
 
 .global-search input { min-width: 0; }
-.sidebar-tool-link { display:flex; min-height:40px; align-items:center; gap:8px; padding:0 10px; border-radius:9px; color:var(--sidebar-muted); font-size:11px; text-decoration:none; }
-.sidebar-tool-link:hover { background:var(--sidebar-hover); color:var(--sidebar-text); }
-
 .global-search:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--focus-ring);
@@ -3596,7 +3594,7 @@ a.record-row:hover {
     animation-iteration-count: 1 !important;
   }
 }
-.profile-editor { width: 100%; max-width: 640px; }
+.profile-editor { width: 100%; max-width: 980px; }
 .profile-avatar-editor { padding: 16px; min-width: 0; }
 .profile-avatar-editor h2 { margin: 0 0 12px; font-size: 24px; }
 .profile-editor .content-form { gap: 12px; }
@@ -3681,11 +3679,27 @@ a.record-row:hover {
 .custom-palettes { width:100%; max-width:980px; padding:18px; }
 .custom-palette-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
 .custom-palette { display:grid; min-width:0; gap:12px; padding:13px; border:1px solid var(--line); border-radius:12px; background:var(--surface-muted); }
+.custom-palette--active { border-color:var(--accent); box-shadow:0 0 0 3px var(--focus-ring); }
+.custom-palette__heading { display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--text-muted); font-size:9px; text-transform:uppercase; letter-spacing:.08em; }
+.custom-palette__heading strong { color:var(--text-primary); font-size:10px; }
 .palette-token-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.palette-token-grid label { display:flex; min-width:0; align-items:center; justify-content:space-between; gap:8px; color:var(--text-muted); font-size:10px; }
-.palette-token-grid input { width:42px; min-width:42px; height:32px; padding:2px; }
+.palette-token-grid label { display:grid; min-width:0; gap:5px; color:var(--text-muted); font-size:10px; }
+.palette-token-control { display:grid; grid-template-columns:42px minmax(0,1fr); gap:5px; }
+.palette-token-control input[type="color"] { width:42px; min-width:42px; height:34px; padding:2px; }
+.palette-token-control input:not([type="color"]) { width:100%; min-width:0; height:34px; padding:5px 7px; border:1px solid var(--line); border-radius:7px; background:var(--control-fill); color:var(--text-primary); font-size:10px; text-transform:uppercase; }
 .palette-sample { display:grid; gap:5px; padding:12px; border-radius:9px; background:var(--canvas); color:var(--text-primary); }
 .palette-sample span { color:var(--text-muted); font-size:11px; }.palette-sample button { width:max-content; border:0; border-radius:6px; padding:6px 9px; background:var(--accent); color:var(--text-primary); }
+.custom-palette .notice--warning { display:grid; gap:3px; font-size:10px; }
 .sketch-page { width:100%; }.sketch-pad { display:grid; gap:10px; width:min(100%,1100px); }.sketch-tools { display:flex; flex-wrap:wrap; gap:7px; }.sketch-tools button { display:inline-flex; min-height:42px; align-items:center; gap:6px; padding:0 11px; border:1px solid var(--line); border-radius:9px; background:var(--control-fill); color:var(--text-primary); cursor:pointer; }.sketch-tools button[aria-pressed="true"] { outline:3px solid var(--focus-ring); border-color:var(--accent); }.sketch-tools i { width:14px; height:14px; border:1px solid var(--line); border-radius:50%; }.sketch-pad canvas { display:block; width:100%; height:min(68vh,700px); border:1px solid var(--line); border-radius:12px; background:var(--sketch-black); box-shadow:var(--shadow-lg); touch-action:none; }
+.sketch-tools button:disabled { cursor:not-allowed; opacity:.45; }
+.napkin-capture__link-sketch { display:grid; min-width:0; grid-column:1/-1; gap:17px; }
+.sketch-pad--embedded { width:100%; padding-top:2px; }
+.sketch-pad__heading { display:grid; gap:3px; color:var(--ink); font-size:11px; }
+.sketch-pad__heading small { color:var(--text-muted); font-weight:400; }
+.sketch-pad--embedded canvas { height:clamp(260px,42vh,430px); box-shadow:var(--shadow-sm); }
+.napkin-capture-actions { display:grid; width:min(100%,360px); align-items:stretch; }
+.napkin-capture-actions button { width:100%; }
+.napkin-sketch-detail { display:grid; width:min(100%,760px); gap:10px; padding:16px; }
+.napkin-sketch-detail img { display:block; width:100%; max-height:520px; object-fit:contain; border:1px solid var(--line); border-radius:10px; background:var(--sketch-black); }
 @media(max-width:820px){.custom-palette-grid{grid-template-columns:1fr}.sketch-pad canvas{height:calc(100svh - 260px);min-height:360px}.workspace__main,.page-stack,.panel,.detail-hero,.vendor-editor-page{min-width:0;max-width:100%}.vendor-contact-row>*{min-width:0}.reference-links a{min-width:0;overflow-wrap:anywhere}}
-@media(max-width:560px){.shared-travel__lookup{grid-template-columns:1fr}.palette-token-grid{grid-template-columns:1fr}.sketch-tools button{flex:1 1 auto;justify-content:center}.sketch-pad canvas{height:calc(100svh - 330px);min-height:320px}}
+@media(max-width:560px){.shared-travel__lookup{grid-template-columns:1fr}.palette-token-grid{grid-template-columns:1fr}.sketch-tools button{flex:1 1 auto;justify-content:center}.sketch-pad canvas{height:calc(100svh - 330px);min-height:320px}.sketch-pad--embedded canvas{height:300px;min-height:260px}.napkin-capture-actions{width:100%}}

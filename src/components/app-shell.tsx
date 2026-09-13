@@ -19,7 +19,6 @@ import {
   Martini,
   PlaneTakeoff,
   Pin,
-  Pencil,
   Search,
   Settings2,
   Users,
@@ -117,9 +116,8 @@ export function AppShell({ children, name, email, role, profileId, avatarVersion
         })}
       </nav>
       <div className="sidebar__footer">
-        <small className="sidebar__version">T.I.K.I. v{version}</small>
         <InstallTiki />
-        <Link href="/sketch" className="sidebar-tool-link" onClick={() => setOpen(false)}><Pencil size={15}/> Sketch</Link>
+        <small className="sidebar__version">T.I.K.I. v{version}</small>
         <Link href="/account" className="user-card user-card--editable" aria-label="Open My Account" onClick={() => setOpen(false)}>
           <MemberAvatar id={profileId} name={name || email} version={avatarVersion} />
           <div className="user-card__copy">
