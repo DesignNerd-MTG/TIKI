@@ -1,5 +1,6 @@
 import type { AppRole, EntityKind, ManagedRecord } from "@/lib/types";
 import { referenceCollections } from "./references.ts";
+import { fixtureIpRatings } from "./fixture-physical.ts";
 
 export const contentStatuses = ["draft", "submitted", "published", "archived"] as const;
 export const napkinStatuses = ["raw", "needs_review", "converted", "archived"] as const;
@@ -124,6 +125,8 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
       ] },
       { name: "preferred_mode", label: "LDG preferred mode", type: "text", maxLength: 160 },
       { name: "dmx_footprint", label: "DMX Footprint in Preferred Mode", type: "number", help: "Positive channel count." },
+      { name: "weight_lb", label: "Weight (lb)", type: "number", help: "Optional weight in pounds; decimals allowed, greater than 0 and at most 10,000 lb." },
+      { name: "ip_rating", label: "IP Rating", type: "select", options: [{ value: "", label: "Not specified" }, ...fixtureIpRatings.map((value) => ({ value, label: value }))] },
       { name: "power_input_connector", label: "Power input", type: "select", options: [
         { value: "", label: "Choose a power connection" },
         ...fixturePowerInputOptions,

@@ -16,6 +16,8 @@ import { ReferenceCard } from "@/components/reference-card";
 import { RecheckReference } from "@/components/reference-controls";
 import { referenceCollection } from "@/lib/references";
 import { canAddFixtureManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
+import { FixtureCreate } from "@/components/fixture-create";
+import { fixtureQuickSpecs } from "@/lib/fixture-physical";
 
 function stringify(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -165,7 +167,7 @@ export async function ContentCreatePage({ kind }: { kind: EntityKind }) {
       <Link className="back-link" href={config.route}><ArrowLeft size={16} /> Back to {config.plural.toLowerCase()}</Link>
       <PageHeader eyebrow="New record" title={`Add ${config.singular.toLowerCase()}`} description={profile.role === "admin" ? "Administrator entries publish immediately unless you choose another status." : "Start with what is known. Drafts can be refined and submitted for review later."} />
       {manufacturerResult.error && <div className="notice notice--error">The manufacturer list could not be loaded. Refresh before creating this Fixture.</div>}
-      <section className="panel editor-panel"><ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} /></section>
+      <section className="panel editor-panel">{kind === "fixture" ? <FixtureCreate statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} /> : <ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} />}</section>
     </div>
   );
 }
@@ -203,7 +205,7 @@ export async function ContentDetailPage({
   const mayArchive = record.status !== "archived" && canArchiveContent(profile.role, identity.id, kind, record);
   const title = getRecordTitle(kind, record);
   const externalFields = config.fields.filter((field) => field.type === "url" && stringify(record[field.name]));
-  const detailFields = config.fields.filter((field) => (kind === "napkin" || field.name !== config.titleField) && field.type !== "url" && stringify(record[field.name]));
+  const detailFields = config.fields.filter((field) => (kind === "napkin" || field.name !== config.titleField) && field.type !== "url" && !(kind === "fixture" && fixtureQuickSpecs.includes(field.name)) && stringify(record[field.name]));
   const filingKind = typeof record.converted_to_kind === "string" && record.converted_to_kind in contentConfigs && record.converted_to_kind !== "napkin" ? record.converted_to_kind as EntityKind : null;
   const filingId = typeof record.converted_to_id === "string" ? record.converted_to_id : null;
   const filingDestination = filingKind && filingId ? { config: contentConfigs[filingKind], href: `${contentConfigs[filingKind].route}/${filingId}` } : null;
@@ -228,6 +230,12 @@ export async function ContentDetailPage({
 
       <div className="detail-columns">
         <section className="panel detail-panel">
+          {kind === "fixture" && <section aria-label="Fixture quick specs">
+            <p className="eyebrow">Quick specs</p>
+            <dl className="detail-definition-list">
+              {fixtureQuickSpecs.map((key) => <div key={key}><dt>{config.fields.find((field) => field.name === key)?.label}</dt><dd>{stringify(record[key]) ? `${stringify(record[key])}${key === "weight_lb" ? " lb" : ""}` : "Not specified"}</dd></div>)}
+            </dl>
+          </section>}
           <div className="panel__heading"><div><p className="eyebrow">Record details</p><h2>What the team should know</h2></div></div>
           <dl className="detail-definition-list">
             {detailFields.map((field) => <div key={field.name}><dt>{field.label}</dt><dd>{kind === "link" && ["collection_id","subcollection_id"].includes(field.name) ? referenceCollection(record[field.name])?.name : stringify(record[field.name])}</dd></div>)}

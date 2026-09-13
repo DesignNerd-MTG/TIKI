@@ -14,12 +14,14 @@ export function ManufacturerSelector({
   initialName = "",
   canAdd,
   error,
+  isNew = false,
 }: {
   manufacturers: FixtureManufacturer[];
   initialId?: string;
   initialName?: string;
   canAdd: boolean;
   error?: string;
+  isNew?: boolean;
 }) {
   const [options, setOptions] = useState(manufacturers);
   const [selectedId, setSelectedId] = useState(initialId);
@@ -110,7 +112,7 @@ export function ManufacturerSelector({
         </div>
       )}
       {selectedId && <small className="manufacturer-selector__selected">Selected: {selectedName}</small>}
-      {unresolvedLegacy && <small className="field-error">Legacy value “{initialName}” is unresolved. It will be preserved until an Editor chooses the correct canonical manufacturer.</small>}
+      {unresolvedLegacy && <small className="field-error">{isNew ? `Imported manufacturer “${initialName}” is unresolved. Choose a canonical manufacturer before creating this Fixture.` : `Legacy value “${initialName}” is unresolved. It will be preserved until an Editor chooses the correct canonical manufacturer.`}</small>}
       {error && <small className="field-error">{error}</small>}
       <small>Type a canonical name or a common alias such as HES, VL, or Chauvet Pro.</small>
       {canAdd && <button className="text-button manufacturer-selector__add" type="button" onClick={() => { setShowAdd(true); setActionState(initialActionState); setNewName(query === initialName ? "" : query); }}><Plus size={15} /> Add Manufacturer</button>}

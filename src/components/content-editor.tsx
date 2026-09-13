@@ -90,6 +90,7 @@ export function ContentEditor({
   adminCanPublishWithoutRevision = false,
   manufacturers = [],
   canAddManufacturer = false,
+  initialValues = {},
 }: {
   kind: EntityKind;
   record?: ManagedRecord | null;
@@ -100,6 +101,7 @@ export function ContentEditor({
   adminCanPublishWithoutRevision?: boolean;
   manufacturers?: FixtureManufacturer[];
   canAddManufacturer?: boolean;
+  initialValues?: Record<string, string | number | null>;
 }) {
   const config = contentConfigs[kind];
   const [collection, setCollection] = useState(String(record?.collection_id ?? "unsorted"));
@@ -121,9 +123,9 @@ export function ContentEditor({
       <div className="content-form__grid">
         {config.fields.map((field, index) => {
           const error = state.fieldErrors?.[field.name];
-          const value = record?.[field.name];
+          const value = record ? record[field.name] : initialValues[field.name];
           if (kind === "fixture" && field.name === "manufacturer") {
-            return <ManufacturerSelector key={field.name} manufacturers={manufacturers} initialId={typeof record?.manufacturer_id === "string" ? record.manufacturer_id : ""} initialName={typeof value === "string" ? value : ""} canAdd={canAddManufacturer} error={error} />;
+            return <ManufacturerSelector key={field.name} manufacturers={manufacturers} initialId={String(record?.manufacturer_id ?? initialValues.manufacturer_id ?? "")} initialName={typeof value === "string" ? value : ""} isNew={!record} canAdd={canAddManufacturer} error={error} />;
           }
           const className = field.wide ? "form-field form-field--wide" : "form-field";
           const selectOptions = field.options ?? [];
@@ -152,7 +154,7 @@ export function ContentEditor({
               ) : field.type === "checkbox" ? (
                 <span className="check-control"><input name={field.name} type="checkbox" value="true" defaultChecked={value === true} /> Yes</span>
               ) : (
-                <input name={field.name} type={field.type} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} required={field.required} maxLength={field.maxLength} placeholder={field.placeholder} aria-invalid={Boolean(error)} autoFocus={!record && index === 0} />
+                <input name={field.name} type={field.type} step={field.name === "weight_lb" ? "any" : undefined} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} required={field.required} maxLength={field.maxLength} placeholder={field.placeholder} aria-invalid={Boolean(error)} autoFocus={!record && index === 0} />
               )}
               {field.help && <small>{field.help}</small>}
               {error && <small className="field-error">{error}</small>}
