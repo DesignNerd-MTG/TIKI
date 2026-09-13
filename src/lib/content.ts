@@ -19,6 +19,7 @@ export const fixtureTypeOptions = [
   "LED Soft",
   "LED Brick/Wash",
   "LED PAR",
+  "LED-Punch Light",
   "LED Space",
   "LED Strobe/Blinder",
   "Conventional Striplight",

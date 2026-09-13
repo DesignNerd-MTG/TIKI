@@ -90,8 +90,9 @@ describe("content validation and failure handling", () => {
     assert.equal(newRecord.valid, false);
     if (!newRecord.valid) assert.match(newRecord.fieldErrors.fixture_type, /listed fixture type/i);
     assert.equal(validateContentInput("fixture", "contributor", input, "draft", { fixture_type: "Batten" }).valid, true);
-    assert.equal(fixtureTypeOptions.length, 22);
+    assert.equal(fixtureTypeOptions.length, 23);
     assert.ok(fixtureTypeOptions.some((option) => option.value === "LED Strobe/Blinder"));
+    assert.ok(fixtureTypeOptions.some((option) => option.value === "LED-Punch Light"));
     assert.ok(fixtureTypeOptions.some((option) => option.value === "Conventional Strobe/Blinder"));
   });
 
@@ -221,6 +222,7 @@ describe("tags, search, and record presentation", () => {
     const sql = await readFile(new URL("../supabase/migrations/202609140009_fixture_catalog_fields.sql", import.meta.url), "utf8");
     const powerSql = await readFile(new URL("../supabase/migrations/202609140010_fixture_power_fields.sql", import.meta.url), "utf8");
     const photometricsSql = await readFile(new URL("../supabase/migrations/202609140011_fixture_photometrics.sql", import.meta.url), "utf8");
+    const cleanupSql = await readFile(new URL("../supabase/migrations/202609140012_fixture_type_cleanup.sql", import.meta.url), "utf8");
     const typeField = fixtureFields.find((field) => field.name === "fixture_type");
     assert.equal(typeField?.type, "select");
     assert.equal(typeField?.required, true);
@@ -244,6 +246,9 @@ describe("tags, search, and record presentation", () => {
     assert.match(powerSql, /add column if not exists power_input_connector text/i);
     assert.match(powerSql, /add column if not exists power_passthrough boolean/i);
     assert.match(photometricsSql, /add column if not exists photometrics_url text/i);
+    assert.match(cleanupSql, /update public\.fixtures/i);
+    assert.match(cleanupSql, /set fixture_type = null/i);
+    assert.match(cleanupSql, /lower\(btrim\(fixture_type\)\) = 'wash'/i);
     assert.equal(fixtureFields.some((field) => field.name === "typical_use"), false);
     assert.equal(showFields.some((field) => field.name === "primary_link"), false);
     assert.ok(showFields.some((field) => field.name === "dropbox_url" && field.label === "Dropbox Link"));
