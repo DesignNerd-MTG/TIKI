@@ -1,10 +1,59 @@
 import type { AppRole, EntityKind, ManagedRecord } from "@/lib/types";
 import { referenceCollections } from "./references.ts";
+import { fixtureIpRatings } from "./fixture-physical.ts";
 
 export const contentStatuses = ["draft", "submitted", "published", "archived"] as const;
 export const napkinStatuses = ["raw", "needs_review", "converted", "archived"] as const;
 export const filingDestinationKinds = ["fixture", "show", "link", "location", "drink"] as const;
 export type FilingDestinationKind = (typeof filingDestinationKinds)[number];
+
+export const fixtureTypeOptions = [
+  "Mover Spot",
+  "Mover Wash",
+  "Mover Profile",
+  "Mover Strip",
+  "Mover FX",
+  "Gimmick/FX Light",
+  "Battens & Tubes",
+  "LED Striplight",
+  "LED Leko",
+  "LED Fresnel",
+  "LED Soft",
+  "LED Brick/Wash",
+  "LED PAR",
+  "LED-Punch Light",
+  "LED Space",
+  "LED Strobe/Blinder",
+  "Conventional Striplight",
+  "Conventional Leko",
+  "Conventional Fresnel",
+  "Conventional Soft",
+  "Conventional Brick/Wash",
+  "Conventional PAR",
+  "Conventional Space",
+  "Conventional Strobe/Blinder",
+].map((value) => ({ value, label: value }));
+
+export const fixturePowerInputOptions = [
+  "powerCON TRUE1 TOP",
+  "powerCON TRUE1 (legacy)",
+  "powerCON 20 A (blue/gray)",
+  "powerCON 32 A",
+  "Edison / NEMA 5-15",
+  "NEMA 5-20",
+  "Stage Pin / Bates",
+  "Twist-Lock / NEMA L5-20",
+  "IEC C14",
+  "IEC C20",
+  "Schuko / CEE 7/7",
+  "IEC 60309 / Pin & Sleeve",
+  "Socapex",
+  "Hardwired / bare lead",
+  "External low-voltage DC supply",
+  "Battery / rechargeable",
+  "Multiple / configurable",
+  "Other",
+].map((value) => ({ value, label: value }));
 
 const countryDisplayNames = new Intl.DisplayNames(["en"], { type: "region" });
 const countryCodes = `AF AL DZ AD AO AG AR AM AU AT AZ BS BH BD BB BY BE BZ BJ BT BO BA BW BR BN BG BF BI CV KH CM CA CF TD CL CN CO KM CG CD CR CI HR CU CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FJ FI FR GA GM GE DE GH GR GD GT GN GW GY HT HN HU IS IN ID IR IQ IE IL IT JM JP JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MG MW MY MV ML MT MH MR MU MX FM MD MC MN ME MA MZ MM NA NR NP NL NZ NI NE NG MK NO OM PK PW PS PA PG PY PE PH PL PT QA RO RU RW KN LC VC WS SM ST SA SN RS SC SL SG SK SI SB SO ZA SS ES LK SD SR SE CH SY TW TJ TZ TH TL TG TO TT TN TR TM TV UG UA AE GB UY UZ VU VA VE VN YE ZM ZW XK`.split(" ");
@@ -39,7 +88,7 @@ export function getStatusLabel(status: string) {
 export type FieldDefinition = {
   name: string;
   label: string;
-  type: "text" | "textarea" | "url" | "number" | "date" | "select" | "checkbox";
+  type: "text" | "textarea" | "url" | "number" | "date" | "select" | "checkbox" | "boolean-select";
   required?: boolean;
   placeholder?: string;
   help?: string;
@@ -69,16 +118,28 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
     minimumCreateRole: "contributor", titleField: "name",
     fields: [
       { name: "name", label: "Fixture name", type: "text", required: true, maxLength: 160 },
-      { name: "manufacturer", label: "Manufacturer", type: "text", maxLength: 120 },
-      { name: "fixture_type", label: "Fixture type", type: "text", maxLength: 120 },
+      { name: "manufacturer", label: "Manufacturer", type: "text", required: true, maxLength: 120, help: "Choose the canonical manufacturer; aliases are searchable." },
+      { name: "fixture_type", label: "Fixture type", type: "select", required: true, options: [
+        { value: "", label: "Choose a fixture type" },
+        ...fixtureTypeOptions,
+      ] },
       { name: "preferred_mode", label: "LDG preferred mode", type: "text", maxLength: 160 },
       { name: "dmx_footprint", label: "DMX Footprint in Preferred Mode", type: "number", help: "Positive channel count." },
+      { name: "weight_lb", label: "Weight (lb)", type: "number", help: "Optional weight in pounds; decimals allowed, greater than 0 and at most 10,000 lb." },
+      { name: "ip_rating", label: "IP Rating", type: "select", options: [{ value: "", label: "Not specified" }, ...fixtureIpRatings.map((value) => ({ value, label: value }))] },
+      { name: "power_input_connector", label: "Power input", type: "select", options: [
+        { value: "", label: "Choose a power connection" },
+        ...fixturePowerInputOptions,
+      ] },
+      { name: "power_passthrough", label: "Power passthrough", type: "boolean-select", help: "Can another fixture be powered from this fixture?" },
       { name: "power_note", label: "Power notes", type: "textarea", maxLength: 4000, wide: true },
       { name: "control_note", label: "Data / control notes", type: "textarea", maxLength: 4000, wide: true },
       { name: "field_notes", label: "Field notes", type: "textarea", maxLength: 4000, wide: true },
       { name: "fixture_page_url", label: "Fixture Page Link", type: "url", placeholder: "https://…" },
       { name: "manual_url", label: "Manual Link", type: "url", placeholder: "https://…" },
       { name: "dmx_chart_url", label: "DMX Chart Link", type: "url", placeholder: "https://…" },
+      { name: "ies_url", label: "IES File Link", type: "url", placeholder: "https://…" },
+      { name: "photometrics_url", label: "Photometrics Link", type: "url", placeholder: "https://…" },
       { name: "showfile_url", label: "Link to Showfile with Fixture Included", type: "url", placeholder: "https://…", wide: true },
     ],
   },

@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 import { hasMinimumRole, roleLabel } from "@/lib/access";
-import { initials } from "@/lib/format";
+import { MemberAvatar } from "@/components/member-avatar";
 import type { AppRole } from "@/lib/types";
 import { Brand } from "@/components/brand";
 import { InstallTiki } from "@/components/install-tiki";
@@ -51,9 +51,11 @@ type AppShellProps = {
   name: string;
   email: string;
   role: AppRole;
+  profileId?: string;
+  avatarVersion?: string;
 };
 
-export function AppShell({ children, name, email, role }: AppShellProps) {
+export function AppShell({ children, name, email, role, profileId, avatarVersion }: AppShellProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const visibleNavigation = navigation.filter((item) => hasMinimumRole(role, item.minimum));
@@ -91,13 +93,14 @@ export function AppShell({ children, name, email, role }: AppShellProps) {
       <div className="sidebar__footer">
         <small className="sidebar__version">T.I.K.I. v{version}</small>
         <InstallTiki />
-        <div className="user-card">
-          <div className="avatar" aria-hidden="true">{initials(name || email)}</div>
+        <Link href="/profile" className="user-card user-card--editable" aria-label="Edit My Profile" onClick={() => setOpen(false)}>
+          <MemberAvatar id={profileId} name={name || email} version={avatarVersion} />
           <div className="user-card__copy">
             <strong>{name || email.split("@")[0]}</strong>
             <span>{roleLabel(role)}</span>
           </div>
-        </div>
+          <ChevronRight size={16} aria-hidden="true" />
+        </Link>
         <form action="/auth/signout" method="post">
           <button className="sign-out" type="submit">Sign out</button>
         </form>

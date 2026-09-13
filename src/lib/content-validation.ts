@@ -1,4 +1,5 @@
 import { contentConfigs } from "./content.ts";
+import { validFixtureWeight } from "./fixture-physical.ts";
 import { canSetStatus } from "./content-rules.ts";
 import { referenceDefaults, validCollectionPair, isReferenceTimestamp } from "./references.ts";
 import type { AppRole, EntityKind } from "@/lib/types";
@@ -36,7 +37,7 @@ export function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-export function validateContentInput(kind: EntityKind, role: AppRole, input: ContentInput, previousStatus?: string): ValidationResult {
+export function validateContentInput(kind: EntityKind, role: AppRole, input: ContentInput, previousStatus?: string, previousRecord?: Record<string, unknown>): ValidationResult {
   if (kind === "link") input = referenceDefaults(input);
   const config = contentConfigs[kind];
   const errors: Record<string, string> = {};
@@ -47,17 +48,31 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
       payload[field.name] = input[field.name] === true || input[field.name] === "true";
       continue;
     }
+    if (field.type === "boolean-select") {
+      const value = String(input[field.name] ?? "").trim();
+      if (field.required && !value) errors[field.name] = `${field.label} is required.`;
+      if (value && value !== "true" && value !== "false") errors[field.name] = `Choose Yes or No for ${field.label.toLowerCase()}.`;
+      payload[field.name] = value ? value === "true" : null;
+      continue;
+    }
     const value = String(input[field.name] ?? "").trim();
     if (field.required && !value) errors[field.name] = `${field.label} is required.`;
     if (field.maxLength && value.length > field.maxLength) errors[field.name] = `${field.label} is too long.`;
     if (field.type === "url" && value.length > 2048) errors[field.name] = "URL must be 2,048 characters or fewer.";
     if (field.type === "url" && value && !isSafeExternalUrl(value)) errors[field.name] = "Use a complete http:// or https:// URL.";
     if (field.type === "date" && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) errors[field.name] = "Use a valid date.";
+    if (field.type === "select" && value && field.options && !field.options.some((option) => option.value === value)) {
+      const unchangedLegacyValue = field.name !== "ip_rating" && previousRecord && String(previousRecord[field.name] ?? "") === value;
+      if (!unchangedLegacyValue) errors[field.name] = `Choose a listed ${field.label.toLowerCase()}.`;
+    }
     if (field.type === "number") {
       if (!value) payload[field.name] = null;
       else {
         const number = Number(value);
-        if (!Number.isInteger(number) || number < 1 || number > 32768) errors[field.name] = "Enter a positive whole number.";
+        if (kind === "fixture" && field.name === "weight_lb") {
+          if (!/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value) || !validFixtureWeight(number)) errors[field.name] = "Enter a weight greater than 0 and at most 10,000 lb.";
+          else payload[field.name] = number;
+        } else if (!Number.isInteger(number) || number < 1 || number > 32768) errors[field.name] = "Enter a positive whole number.";
         else payload[field.name] = number;
       }
     } else {

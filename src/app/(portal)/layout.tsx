@@ -14,7 +14,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <div className="theme-root" data-theme={theme}>
-      <AppShell name={name} email={identity.email} role={profile.role}>
+      <AppShell name={name} email={identity.email} role={profile.role} profileId={identity.id} avatarVersion={profile.updated_at}>
         {children}
       </AppShell>
     </div>

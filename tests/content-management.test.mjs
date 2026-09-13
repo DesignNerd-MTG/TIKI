@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
-import { contentConfigs, countryOptions, filingDestinationKinds, getCountryLabel, getRecordDetail, getRecordMeta, getRecordTitle, getStatusLabel } from "../src/lib/content.ts";
+import { contentConfigs, countryOptions, filingDestinationKinds, fixturePowerInputOptions, fixtureTypeOptions, getCountryLabel, getRecordDetail, getRecordMeta, getRecordTitle, getStatusLabel } from "../src/lib/content.ts";
 import { readAdditionalLinks, validateAdditionalLinks } from "../src/lib/additional-links.ts";
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent, canSetStatus } from "../src/lib/content-rules.ts";
 import { buildSearchPattern, isSafeExternalUrl, isUuid, normalizeTags, slugifyTag, validateContentInput } from "../src/lib/content-validation.ts";
@@ -67,15 +67,54 @@ describe("content status workflow", () => {
 describe("content validation and failure handling", () => {
   it("accepts a valid fixture and normalizes number and tags", () => {
     const result = validateContentInput("fixture", "contributor", {
-      name: "MVP Test Fixture", manufacturer: "Test", fixture_type: "Wash", preferred_mode: "Extended",
+      name: "MVP Test Fixture", manufacturer: "Test", fixture_type: "Mover Wash", preferred_mode: "Extended",
       dmx_footprint: "32", typical_use: "Testing", power_note: "", control_note: "", field_notes: "",
-      dmx_chart_url: "https://example.com/chart", manual_url: "", status: "draft", tags: "LED, led, Broadcast", revision_note: "Initial test record",
+      power_input_connector: "powerCON TRUE1 TOP", power_passthrough: "true",
+      fixture_page_url: "", dmx_chart_url: "https://example.com/chart", manual_url: "", ies_url: "https://example.com/fixture.ies", photometrics_url: "https://example.com/photometrics", showfile_url: "", status: "draft", tags: "LED, led, Broadcast", revision_note: "Initial test record",
     });
     assert.equal(result.valid, true);
     if (result.valid) {
       assert.equal(result.payload.dmx_footprint, 32);
+      assert.equal(result.payload.power_passthrough, true);
       assert.deepEqual(result.tags, ["LED", "Broadcast"]);
     }
+  });
+
+  it("enforces standardized fixture types while preserving unchanged legacy records", () => {
+    const input = {
+      name: "Legacy Fixture", manufacturer: "Test", fixture_type: "Batten", preferred_mode: "", dmx_footprint: "",
+      power_note: "", control_note: "", field_notes: "", fixture_page_url: "", manual_url: "", dmx_chart_url: "", ies_url: "", photometrics_url: "", showfile_url: "",
+      status: "draft", tags: "", revision_note: "",
+    };
+    const newRecord = validateContentInput("fixture", "contributor", input);
+    assert.equal(newRecord.valid, false);
+    if (!newRecord.valid) assert.match(newRecord.fieldErrors.fixture_type, /listed fixture type/i);
+    assert.equal(validateContentInput("fixture", "contributor", input, "draft", { fixture_type: "Batten" }).valid, true);
+    assert.equal(fixtureTypeOptions.length, 24);
+    assert.ok(fixtureTypeOptions.some((option) => option.value === "Battens & Tubes"));
+    assert.equal(fixtureTypeOptions.some((option) => option.value === "Wash Bricks"), false);
+    assert.ok(fixtureTypeOptions.some((option) => option.value === "LED Strobe/Blinder"));
+    assert.ok(fixtureTypeOptions.some((option) => option.value === "LED-Punch Light"));
+    assert.ok(fixtureTypeOptions.some((option) => option.value === "Conventional Strobe/Blinder"));
+  });
+
+  it("normalizes fixture power input and passthrough without guessing legacy values", () => {
+    const input = {
+      name: "Power Test", manufacturer: "Test", fixture_type: "LED PAR", preferred_mode: "", dmx_footprint: "",
+      power_input_connector: "Stage Pin / Bates", power_passthrough: "false", power_note: "120 V", control_note: "", field_notes: "",
+      fixture_page_url: "", manual_url: "", dmx_chart_url: "", ies_url: "", photometrics_url: "", showfile_url: "", status: "draft", tags: "", revision_note: "",
+    };
+    const valid = validateContentInput("fixture", "contributor", input);
+    assert.equal(valid.valid, true);
+    if (valid.valid) assert.equal(valid.payload.power_passthrough, false);
+    const unknownConnector = validateContentInput("fixture", "contributor", { ...input, power_input_connector: "Mystery plug" });
+    assert.equal(unknownConnector.valid, false);
+    if (!unknownConnector.valid) assert.match(unknownConnector.fieldErrors.power_input_connector, /listed power input/i);
+    const unknownPassthrough = validateContentInput("fixture", "contributor", { ...input, power_passthrough: "maybe" });
+    assert.equal(unknownPassthrough.valid, false);
+    if (!unknownPassthrough.valid) assert.match(unknownPassthrough.fieldErrors.power_passthrough, /Yes or No/i);
+    assert.ok(fixturePowerInputOptions.some((option) => option.value === "powerCON 20 A (blue/gray)"));
+    assert.ok(fixturePowerInputOptions.some((option) => option.value === "IEC 60309 / Pin & Sleeve"));
   });
 
   it("returns field-specific errors for missing names and unsafe URLs", () => {
@@ -176,13 +215,42 @@ describe("tags, search, and record presentation", () => {
     assert.match(list, /target="_blank"/);
   });
 
-  it("keeps common fixture and show links explicit and edge cases reusable", () => {
+  it("standardizes fixture types, fixture sorting, and common resource links", async () => {
     const fixtureFields = contentConfigs.fixture.fields;
     const showFields = contentConfigs.show.fields;
+    const pages = await readFile(new URL("../src/components/content-pages.tsx", import.meta.url), "utf8");
+    const editor = await readFile(new URL("../src/components/content-editor.tsx", import.meta.url), "utf8");
+    const search = await readFile(new URL("../src/app/(portal)/search/page.tsx", import.meta.url), "utf8");
+    const sql = await readFile(new URL("../supabase/migrations/202609140009_fixture_catalog_fields.sql", import.meta.url), "utf8");
+    const powerSql = await readFile(new URL("../supabase/migrations/202609140010_fixture_power_fields.sql", import.meta.url), "utf8");
+    const photometricsSql = await readFile(new URL("../supabase/migrations/202609140011_fixture_photometrics.sql", import.meta.url), "utf8");
+    const cleanupSql = await readFile(new URL("../supabase/migrations/202609140012_fixture_type_cleanup.sql", import.meta.url), "utf8");
+    const typeField = fixtureFields.find((field) => field.name === "fixture_type");
+    assert.equal(typeField?.type, "select");
+    assert.equal(typeField?.required, true);
+    assert.deepEqual(typeField?.options?.slice(1), fixtureTypeOptions);
     assert.equal(fixtureFields.find((field) => field.name === "dmx_footprint")?.label, "DMX Footprint in Preferred Mode");
-    assert.deepEqual(fixtureFields.filter((field) => ["fixture_page_url", "manual_url", "dmx_chart_url", "showfile_url"].includes(field.name)).map((field) => field.label), [
-      "Fixture Page Link", "Manual Link", "DMX Chart Link", "Link to Showfile with Fixture Included",
+    assert.deepEqual(fixtureFields.filter((field) => ["fixture_page_url", "manual_url", "dmx_chart_url", "ies_url", "photometrics_url", "showfile_url"].includes(field.name)).map((field) => field.label), [
+      "Fixture Page Link", "Manual Link", "DMX Chart Link", "IES File Link", "Photometrics Link", "Link to Showfile with Fixture Included",
     ]);
+    for (const [sort, column] of [["manufacturer", "manufacturer"], ["type", "fixture_type"], ["name", "name"]]) {
+      assert.match(pages, new RegExp(`sort === "${sort}"[\\s\\S]*order\\("${column}"`));
+    }
+    assert.match(pages, />Manufacturer<\/Link>/);
+    assert.match(pages, />Type<\/Link>/);
+    assert.match(pages, />Fixture name<\/Link>/);
+    assert.match(editor, /existing value/);
+    assert.match(search, /rpc\("search_fixtures"/);
+    assert.match(sql, /add column if not exists ies_url text/i);
+    assert.match(sql, /create index if not exists fixtures_type_name_idx/i);
+    assert.deepEqual(fixtureFields.find((field) => field.name === "power_input_connector")?.options?.slice(1), fixturePowerInputOptions);
+    assert.equal(fixtureFields.find((field) => field.name === "power_passthrough")?.type, "boolean-select");
+    assert.match(powerSql, /add column if not exists power_input_connector text/i);
+    assert.match(powerSql, /add column if not exists power_passthrough boolean/i);
+    assert.match(photometricsSql, /add column if not exists photometrics_url text/i);
+    assert.match(cleanupSql, /update public\.fixtures/i);
+    assert.match(cleanupSql, /set fixture_type = null/i);
+    assert.match(cleanupSql, /lower\(btrim\(fixture_type\)\) = 'wash'/i);
     assert.equal(fixtureFields.some((field) => field.name === "typical_use"), false);
     assert.equal(showFields.some((field) => field.name === "primary_link"), false);
     assert.ok(showFields.some((field) => field.name === "dropbox_url" && field.label === "Dropbox Link"));
@@ -328,7 +396,7 @@ describe("Supabase RLS migration", () => {
 
   it("searches travel-profile names without exposing private travel details", async () => {
     const search = await readFile(new URL("../src/app/(portal)/search/page.tsx", import.meta.url), "utf8");
-    assert.match(search, /from\("fixtures"\)/);
+    assert.match(search, /rpc\("search_fixtures"/);
     assert.match(search, /from\("shows"\)/);
     assert.match(search, /staffing_notes\.ilike/);
     assert.match(search, /from\("travel_profiles"\)\.select\("user_id,name"\)/);

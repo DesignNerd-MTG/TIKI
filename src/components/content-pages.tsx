@@ -15,6 +15,9 @@ import type { EntityKind, ManagedRecord } from "@/lib/types";
 import { ReferenceCard } from "@/components/reference-card";
 import { RecheckReference } from "@/components/reference-controls";
 import { referenceCollection } from "@/lib/references";
+import { canAddFixtureManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
+import { FixtureCreate } from "@/components/fixture-create";
+import { fixtureQuickSpecs, formatFixtureWeight } from "@/lib/fixture-physical";
 
 function stringify(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -79,9 +82,20 @@ export async function ContentIndexPage({
     createClient(),
   ]);
   const showArchived = params.view === "archived" && (profile.role === "editor" || profile.role === "admin");
-  const sort = params.sort === "alpha" || (kind === "location" && params.sort === "city") ? params.sort : "date";
+  const fixtureSorts = new Set(["manufacturer", "type", "name"]);
+  const sort = kind === "fixture" && fixtureSorts.has(String(params.sort))
+    ? String(params.sort)
+    : kind === "fixture" && params.sort === "alpha"
+      ? "name"
+      : params.sort === "alpha" || (kind === "location" && params.sort === "city") ? params.sort : "date";
   let query = supabase.from(config.table).select("*");
-  query = sort === "city"
+  query = sort === "manufacturer"
+    ? query.order("manufacturer", { ascending: true, nullsFirst: false }).order("name", { ascending: true }).order("updated_at", { ascending: false })
+    : sort === "type"
+      ? query.order("fixture_type", { ascending: true, nullsFirst: false }).order("manufacturer", { ascending: true, nullsFirst: false }).order("name", { ascending: true })
+      : sort === "name"
+        ? query.order("name", { ascending: true }).order("manufacturer", { ascending: true, nullsFirst: false }).order("updated_at", { ascending: false })
+        : sort === "city"
     ? query.order("city", { ascending: true, nullsFirst: false }).order(config.titleField, { ascending: true })
     : sort === "alpha"
       ? query.order(config.titleField, { ascending: true }).order("updated_at", { ascending: false })
@@ -108,7 +122,11 @@ export async function ContentIndexPage({
       <div className="sort-control" aria-label="Sort records">
         <span>Sort</span>
         <Link className={sort === "date" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=date`}>Recently updated</Link>
-        <Link className={sort === "alpha" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=alpha`}>A–Z</Link>
+        {kind === "fixture" ? <>
+          <Link className={sort === "manufacturer" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=manufacturer`}>Manufacturer</Link>
+          <Link className={sort === "type" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=type`}>Type</Link>
+          <Link className={sort === "name" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=name`}>Fixture name</Link>
+        </> : <Link className={sort === "alpha" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=alpha`}>A–Z</Link>}
         {kind === "location" && <Link className={sort === "city" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=city`}>City</Link>}
       </div>
       {mayReviewArchive && <Link className="secondary-button" href={showArchived ? `${browseRoute}?sort=${sort}` : `${browseRoute}?view=archived&sort=${sort}`}>{showArchived ? "Current records" : "Archived"}</Link>}
@@ -139,12 +157,17 @@ export async function ContentIndexPage({
 
 export async function ContentCreatePage({ kind }: { kind: EntityKind }) {
   const config = contentConfigs[kind];
-  const { profile } = await requireActiveProfile(config.minimumCreateRole);
+  const [{ profile }, supabase] = await Promise.all([requireActiveProfile(config.minimumCreateRole), createClient()]);
+  const manufacturerResult = kind === "fixture"
+    ? await supabase.from("fixture_manufacturers").select("id,name,slug,active,aliases").eq("active", true).order("name")
+    : { data: [], error: null };
+  const manufacturers = (manufacturerResult.data ?? []) as FixtureManufacturer[];
   return (
     <div className="page-stack">
       <Link className="back-link" href={config.route}><ArrowLeft size={16} /> Back to {config.plural.toLowerCase()}</Link>
       <PageHeader eyebrow="New record" title={`Add ${config.singular.toLowerCase()}`} description={profile.role === "admin" ? "Administrator entries publish immediately unless you choose another status." : "Start with what is known. Drafts can be refined and submitted for review later."} />
-      <section className="panel editor-panel"><ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} /></section>
+      {manufacturerResult.error && <div className="notice notice--error">The manufacturer list could not be loaded. Refresh before creating this Fixture.</div>}
+      <section className="panel editor-panel">{kind === "fixture" ? <FixtureCreate statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} /> : <ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} />}</section>
     </div>
   );
 }
@@ -166,19 +189,23 @@ export async function ContentDetailPage({
   const result = await supabase.from(config.table).select("*").eq("id", id).maybeSingle();
   if (!result.data) notFound();
   const record = result.data as ManagedRecord;
-  const [tags, revisionsResult, additionalLinksResult] = await Promise.all([
+  const [tags, revisionsResult, additionalLinksResult, manufacturerResult] = await Promise.all([
     getTags(kind, id),
     supabase.from("revision_notes").select("id,summary,source,created_at").eq("entity_kind", kind).eq("entity_id", id).order("created_at", { ascending: false }).limit(30),
     sectionsForKind(kind).length
       ? supabase.from("additional_links").select("id,section,label,url,position").eq("entity_kind", kind).eq("entity_id", id).order("position", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
+    kind === "fixture"
+      ? supabase.from("fixture_manufacturers").select("id,name,slug,active,aliases").order("name")
+      : Promise.resolve({ data: [], error: null }),
   ]);
   const additionalLinks = (additionalLinksResult.data ?? []) as AdditionalLink[];
+  const manufacturers = (manufacturerResult.data ?? []) as FixtureManufacturer[];
   const mayEdit = canEditContent(profile.role, identity.id, kind, record);
   const mayArchive = record.status !== "archived" && canArchiveContent(profile.role, identity.id, kind, record);
   const title = getRecordTitle(kind, record);
   const externalFields = config.fields.filter((field) => field.type === "url" && stringify(record[field.name]));
-  const detailFields = config.fields.filter((field) => (kind === "napkin" || field.name !== config.titleField) && field.type !== "url" && stringify(record[field.name]));
+  const detailFields = config.fields.filter((field) => (kind === "napkin" || field.name !== config.titleField) && field.type !== "url" && !(kind === "fixture" && fixtureQuickSpecs.includes(field.name)) && stringify(record[field.name]));
   const filingKind = typeof record.converted_to_kind === "string" && record.converted_to_kind in contentConfigs && record.converted_to_kind !== "napkin" ? record.converted_to_kind as EntityKind : null;
   const filingId = typeof record.converted_to_id === "string" ? record.converted_to_id : null;
   const filingDestination = filingKind && filingId ? { config: contentConfigs[filingKind], href: `${contentConfigs[filingKind].route}/${filingId}` } : null;
@@ -203,6 +230,12 @@ export async function ContentDetailPage({
 
       <div className="detail-columns">
         <section className="panel detail-panel">
+          {kind === "fixture" && <section aria-label="Fixture quick specs">
+            <p className="eyebrow">Quick specs</p>
+            <dl className="detail-definition-list">
+              {fixtureQuickSpecs.map((key) => <div key={key}><dt>{config.fields.find((field) => field.name === key)?.label}</dt><dd>{key === "weight_lb" ? formatFixtureWeight(stringify(record[key])) : stringify(record[key]) || "Not specified"}</dd></div>)}
+            </dl>
+          </section>}
           <div className="panel__heading"><div><p className="eyebrow">Record details</p><h2>What the team should know</h2></div></div>
           <dl className="detail-definition-list">
             {detailFields.map((field) => <div key={field.name}><dt>{field.label}</dt><dd>{kind === "link" && ["collection_id","subcollection_id"].includes(field.name) ? referenceCollection(record[field.name])?.name : stringify(record[field.name])}</dd></div>)}
@@ -230,7 +263,8 @@ export async function ContentDetailPage({
       {mayEdit ? (
         <section className="panel editor-panel" id="edit-record">
           <div className="panel__heading"><div><p className="eyebrow">Role-aware controls</p><h2>Edit {config.singular.toLowerCase()}</h2></div></div>
-          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} additionalLinks={additionalLinks} adminCanPublishWithoutRevision={profile.role === "admin"} />
+          {manufacturerResult.error && <div className="notice notice--error">The manufacturer list could not be loaded. Refresh before editing this Fixture.</div>}
+          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} additionalLinks={additionalLinks} adminCanPublishWithoutRevision={profile.role === "admin"} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} />
         </section>
       ) : (
         <div className="notice notice--neutral">This record is read-only for your current role.</div>

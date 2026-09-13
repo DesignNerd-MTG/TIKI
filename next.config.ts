@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   agentRules: false,
   poweredByHeader: false,
   reactStrictMode: true,
+  // 4 MB GDTF files plus multipart overhead; actions enforce their own file limits.
+  experimental: { serverActions: { bodySizeLimit: "5mb" } },
 };
 
 export default nextConfig;
