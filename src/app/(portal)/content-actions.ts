@@ -10,6 +10,7 @@ import { isUuid, validateContentInput, type ContentInput } from "@/lib/content-v
 import { getIdentityAndProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
+import { checkReference } from "@/lib/reference-fetch";
 
 export type ContentActionState = {
   ok: boolean;
@@ -78,12 +79,16 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   }
 
   const input = readInput(formData, kind);
+  if (kind === "link" && existing && !String(input.date_added ?? "").trim()) {
+    input.date_added = String(existing.date_added || existing.created_at);
+  }
   const validation = validateContentInput(kind, profile.role, input, existing?.status);
   if (!validation.valid) return { ok: false, message: validation.message, fieldErrors: validation.fieldErrors };
   const additionalLinks = readAdditionalLinks(formData, kind);
   if (!additionalLinks.valid) return { ok: false, message: "Check the additional links and try again.", fieldErrors: { additional_links: additionalLinks.message } };
 
   const payload: Record<string, unknown> = { ...validation.payload };
+  if (kind === "link") Object.assign(payload, await checkReference(String(payload.url)));
   if (!existing) payload.created_by = identity.id;
   if (kind === "napkin" && String(payload.status) === "converted" && existing?.status !== "converted") {
     return { ok: false, message: "Use Approve & File so T.I.K.I. can create and link the destination record." };

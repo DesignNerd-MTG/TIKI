@@ -29,3 +29,6 @@ Thumbs.db
 # Codex/ChatGPT project mirror metadata (not part of the application)
 /AGENTS.md
 /sources/
+
+# Private one-time migration snapshots (may contain shared document URLs)
+/.local/

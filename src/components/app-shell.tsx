@@ -33,7 +33,7 @@ const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge, minimum: "viewer" },
   { href: "/fixtures", label: "Fixtures", icon: Boxes, minimum: "viewer" },
   { href: "/shows", label: "Shows", icon: BookOpenText, minimum: "viewer" },
-  { href: "/links", label: "Link Hub", icon: Link2, minimum: "viewer" },
+  { href: "/links", label: "Reference Hub", icon: Link2, minimum: "viewer" },
   { href: "/documents", label: "Documents", icon: FileText, minimum: "viewer" },
   { href: "/napkin", label: "Add a Napkin", icon: ClipboardPenLine, minimum: "viewer" },
   { href: "/napkin/pile", label: "Pile of Napkins", icon: Layers3, minimum: "viewer" },

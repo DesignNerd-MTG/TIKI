@@ -1,4 +1,5 @@
 import type { AppRole, EntityKind, ManagedRecord } from "@/lib/types";
+import { referenceCollections } from "./references.ts";
 
 export const contentStatuses = ["draft", "submitted", "published", "archived"] as const;
 export const napkinStatuses = ["raw", "needs_review", "converted", "archived"] as const;
@@ -100,13 +101,21 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
     ],
   },
   link: {
-    kind: "link", table: "link_items", route: "/links", singular: "Link", plural: "Link Hub",
-    eyebrow: "Daily tools", description: "Fast routes to timesheets, expenses, downloads, show folders, and department systems.",
+    kind: "link", table: "link_items", route: "/links", singular: "Reference", plural: "Reference Hub",
+    eyebrow: "Resources worth keeping", description: "Find references by collection, across systems, workflows, and ideas.",
     minimumCreateRole: "contributor", titleField: "label",
     fields: [
-      { name: "label", label: "Link label", type: "text", required: true, maxLength: 160 },
-      { name: "category", label: "Category", type: "text", required: true, maxLength: 80, placeholder: "Operations" },
       { name: "url", label: "Authoritative URL", type: "url", required: true, placeholder: "https://…", wide: true },
+      { name: "label", label: "Title / label", type: "text", maxLength: 160, help: "Optional for quick capture; defaults to the website host." },
+      { name: "collection_id", label: "Collection", type: "select", options: [
+        { value: "unsorted", label: "Unsorted" },
+        ...referenceCollections.filter((item) => !item.parent_id && item.id !== "unsorted").map((item) => ({ value: item.id, label: item.name })),
+      ] },
+      { name: "subcollection_id", label: "Subcollection (optional)", type: "select", options: [
+        { value: "", label: "Directly in collection" },
+        ...referenceCollections.filter((item) => item.parent_id).map((item) => ({ value: item.id, label: item.name })),
+      ] },
+      { name: "date_added", label: "Date Added", type: "text", maxLength: 40, help: "Optional on capture. Preserve source dates using an ISO timestamp, e.g. 2022-05-03T14:00:00Z." },
       { name: "description", label: "Description", type: "textarea", maxLength: 2000, wide: true },
     ],
   },

@@ -12,6 +12,9 @@ import { requireActiveProfile } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
+import { ReferenceCard } from "@/components/reference-card";
+import { RecheckReference } from "@/components/reference-controls";
+import { referenceCollection } from "@/lib/references";
 
 function stringify(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -192,6 +195,7 @@ export async function ContentDetailPage({
       </section>
 
       {tags.length > 0 && <div className="tag-list" aria-label="Tags"><Tags size={15} />{tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+      {kind === "link" && <section className="panel detail-panel"><ReferenceCard record={record} tags={tags} />{mayEdit && <RecheckReference id={id} />}{typeof record.final_url === "string" && record.final_url !== record.url && <p>Final destination: {record.final_url}</p>}</section>}
 
       {filingDestination && <div className="notice notice--success">Filed as <Link href={filingDestination.href}>{filingDestination.config.singular}: open the published record</Link>.</div>}
 
@@ -201,7 +205,7 @@ export async function ContentDetailPage({
         <section className="panel detail-panel">
           <div className="panel__heading"><div><p className="eyebrow">Record details</p><h2>What the team should know</h2></div></div>
           <dl className="detail-definition-list">
-            {detailFields.map((field) => <div key={field.name}><dt>{field.label}</dt><dd>{stringify(record[field.name])}</dd></div>)}
+            {detailFields.map((field) => <div key={field.name}><dt>{field.label}</dt><dd>{kind === "link" && ["collection_id","subcollection_id"].includes(field.name) ? referenceCollection(record[field.name])?.name : stringify(record[field.name])}</dd></div>)}
             {!detailFields.length && <div className="compact-empty">No additional details have been recorded yet.</div>}
           </dl>
         </section>

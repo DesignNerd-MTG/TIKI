@@ -1,3 +1,20 @@
+.reference-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: 18px;
+}
+
+.reference-card { overflow: hidden; min-width: 0; }
+.reference-card__body { padding: 20px; display: grid; gap: 10px; }
+.reference-card__body h2, .reference-card__body p { margin: 0; overflow-wrap: anywhere; }
+.reference-card__body h2 { font-size: 21px; }
+.reference-card__body p, .reference-collection p { color: var(--text-secondary); line-height: 1.55; }
+.reference-card__image { width: 100%; height: 155px; object-fit: cover; background: var(--surface-muted); }
+.reference-card__site { display: flex; align-items: center; gap: 8px; min-height: 20px; }
+.reference-card__dates, .reference-card__health { font-size: 12px; }
+.reference-collection:hover { border-color: var(--accent); background: var(--surface-hover); }
+.reference-import-report { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+
 :root {
   --canvas: #c8baa8;
   --surface: #e5d9c8;

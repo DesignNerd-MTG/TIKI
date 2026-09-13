@@ -9,6 +9,7 @@ import { archiveContentAction, deleteContentAction, fileNapkinAction, saveConten
 import { sectionsForKind, type AdditionalLink, type AdditionalLinkSection } from "@/lib/additional-links";
 import { contentConfigs, filingDestinationKinds, getStatusLabel } from "@/lib/content";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
+import { referenceCollection } from "@/lib/references";
 
 function SubmitButton({ create, label }: { create: boolean; label?: string }) {
   const { pending } = useFormStatus();
@@ -95,6 +96,8 @@ export function ContentEditor({
   adminCanPublishWithoutRevision?: boolean;
 }) {
   const config = contentConfigs[kind];
+  const [collection, setCollection] = useState(String(record?.collection_id ?? "unsorted"));
+  const [subcollection, setSubcollection] = useState(String(record?.subcollection_id ?? ""));
   const showStatusControl = kind !== "napkin" || Boolean(record && statuses.length > 1);
   const displayStatuses = kind === "napkin" && record?.status !== "converted" ? statuses.filter((status) => status !== "converted") : statuses;
   const router = useRouter();
@@ -119,6 +122,10 @@ export function ContentEditor({
               <span>{field.label}{field.required && <em> required</em>}</span>
               {field.type === "textarea" ? (
                 <textarea name={field.name} defaultValue={typeof value === "string" ? value : ""} maxLength={field.maxLength} rows={field.name === "body" ? 7 : 4} aria-invalid={Boolean(error)} autoFocus={!record && index === 0} />
+              ) : kind === "link" && field.name === "collection_id" ? (
+                <select name={field.name} value={collection} onChange={(event) => { setCollection(event.target.value); setSubcollection(""); }}>{field.options?.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select>
+              ) : kind === "link" && field.name === "subcollection_id" ? (
+                <select name={field.name} value={subcollection} onChange={(event) => setSubcollection(event.target.value)} aria-invalid={Boolean(error)}>{field.options?.filter((option) => !option.value || referenceCollection(option.value)?.parent_id === collection).map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select>
               ) : field.type === "select" ? (
                 <select name={field.name} defaultValue={typeof value === "string" ? value : field.options?.[0]?.value} aria-invalid={Boolean(error)}>{field.options?.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select>
               ) : field.type === "checkbox" ? (

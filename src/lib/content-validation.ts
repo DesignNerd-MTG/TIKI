@@ -1,5 +1,6 @@
 import { contentConfigs } from "./content.ts";
 import { canSetStatus } from "./content-rules.ts";
+import { referenceDefaults, validCollectionPair, isReferenceTimestamp } from "./references.ts";
 import type { AppRole, EntityKind } from "@/lib/types";
 
 export type ContentInput = Record<string, string | boolean>;
@@ -36,6 +37,7 @@ export function isUuid(value: string) {
 }
 
 export function validateContentInput(kind: EntityKind, role: AppRole, input: ContentInput, previousStatus?: string): ValidationResult {
+  if (kind === "link") input = referenceDefaults(input);
   const config = contentConfigs[kind];
   const errors: Record<string, string> = {};
   const payload: Record<string, string | number | boolean | null> = {};
@@ -67,6 +69,17 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
   if (!canSetStatus(role, kind, status)) errors.status = "Your role cannot set that status.";
   if (!previousStatus && status === "archived") errors.status = "Create the record before archiving it.";
   payload.status = status;
+
+  if (kind === "link") {
+    if (!validCollectionPair(String(input.collection_id), String(input.subcollection_id))) {
+      errors.subcollection_id = "Choose a subcollection within the selected collection.";
+    }
+    const date = String(input.date_added);
+    if (!isReferenceTimestamp(date)) {
+      errors.date_added = "Use a valid ISO date and time with a timezone.";
+    }
+    payload.category = String(input.category);
+  }
 
   if (kind === "show") {
     const start = String(input.start_date ?? "");
