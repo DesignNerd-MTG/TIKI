@@ -1,13 +1,15 @@
 "use server";
 
 import { requireActiveProfile } from "@/lib/auth";
-import { GdtfError, gdtfLimits, parseGdtf } from "@/lib/gdtf";
+import { GdtfError, parseGdtf } from "@/lib/gdtf";
+import { validateGdtfUpload } from "@/lib/gdtf-review";
 import type { GdtfActionState } from "@/lib/gdtf-review";
 
 export async function reviewGdtfAction(form: FormData): Promise<GdtfActionState> {
   await requireActiveProfile("contributor");
   const file = form.get("gdtf");
-  if (!(file instanceof File) || !file.size || file.size > gdtfLimits.upload) return { error: "Choose a non-empty .gdtf file no larger than 2 MB." };
+  const error = validateGdtfUpload(file instanceof File ? file : null);
+  if (error || !(file instanceof File)) return { error };
   try {
     return { review: await parseGdtf(Buffer.from(await file.arrayBuffer()), file.name) };
   } catch (error) {

@@ -6,12 +6,13 @@ import type { Readable } from "node:stream";
 import { SaxesParser } from "saxes";
 import { kilogramsToPounds, validFixtureWeight } from "./fixture-physical.ts";
 import type { GdtfMode, GdtfReview } from "./gdtf-review.ts";
+import { gdtfUploadLimit, validateGdtfUpload } from "./gdtf-review.ts";
 
-export const gdtfLimits = { upload: 2 * 1024 * 1024, xml: 1024 * 1024, entries: 1024, expanded: 32 * 1024 * 1024, ratio: 200, nodes: 20000, depth: 64, modes: 128, milliseconds: 3000 };
+export const gdtfLimits = { upload: gdtfUploadLimit, xml: 1024 * 1024, entries: 1024, expanded: 32 * 1024 * 1024, ratio: 200, nodes: 20000, depth: 64, modes: 128, milliseconds: 3000 };
 export class GdtfError extends Error {}
 const reject = (message: string): never => { throw new GdtfError(message); };
 
-function descriptionXml(buffer: Buffer): Promise<Buffer> {
+function archivePayload(buffer: Buffer, wrapper: boolean, budget: { expanded: number; entries: number }): Promise<Buffer> {
   return new Promise((resolve, rejectPromise) => {
     let zip: ZipFile | undefined;
     let stream: Readable | undefined;
@@ -31,33 +32,35 @@ function descriptionXml(buffer: Buffer): Promise<Buffer> {
       zip = opened;
       zip.on("error", () => finish(new GdtfError("The GDTF archive is damaged or unsafe.")));
       if (zip.entryCount > gdtfLimits.entries) { finish(new GdtfError("GDTF contains too many archive entries.")); return; }
-      let total = 0;
-      let count = 0;
       let description: Entry | undefined;
+      let payloadCount = 0;
       const names = new Set<string>();
       zip.on("entry", (entry: Entry) => {
         if (settled) return;
         const name = entry.fileName;
         const unixType = (entry.externalFileAttributes >>> 16) & 0xf000;
-        total += entry.uncompressedSize;
-        count += 1;
+        budget.expanded += entry.uncompressedSize;
+        budget.entries += 1;
         if (name.length > 512 || !name.isWellFormed() || /[\\:\u0000-\u001f]/.test(name) || name.startsWith("/") || name.split("/").some((part) => part === ".." || part === ".") || unixType === 0xa000 || names.has(name.toLowerCase())) {
           finish(new GdtfError("GDTF contains unsafe or duplicate archive paths.")); return;
         }
         names.add(name.toLowerCase());
-        if (count > gdtfLimits.entries || total > gdtfLimits.expanded || entry.uncompressedSize > Math.max(1, entry.compressedSize) * gdtfLimits.ratio) {
+        if (budget.entries > gdtfLimits.entries || budget.expanded > gdtfLimits.expanded || entry.uncompressedSize > Math.max(1, entry.compressedSize) * gdtfLimits.ratio) {
           finish(new GdtfError("GDTF archive expansion exceeds the safety limit.")); return;
         }
         if ((entry.generalPurposeBitFlag & 1) || ![0, 8].includes(entry.compressionMethod)) {
           finish(new GdtfError("Encrypted or unsupported GDTF archives are not accepted.")); return;
         }
-        if (name === "description.xml") description = entry;
+        if (wrapper && /\.zip$/i.test(name)) { finish(new GdtfError("Only one outer ZIP wrapper is supported; nested ZIPs are not allowed.")); return; }
+        if (wrapper ? /\.gdtf$/i.test(name) : name === "description.xml") { description = entry; payloadCount += 1; }
         zip!.readEntry();
       });
       zip.on("end", () => {
         if (settled) return;
-        if (!description) { finish(new GdtfError("GDTF must contain description.xml at the archive root.")); return; }
-        if (description.uncompressedSize > gdtfLimits.xml) { finish(new GdtfError("GDTF description.xml exceeds the 1 MB limit.")); return; }
+        if (!description) { finish(new GdtfError(wrapper ? "Wrapper ZIP must contain exactly one .gdtf payload." : "GDTF must contain description.xml at the archive root.")); return; }
+        if (payloadCount !== 1) { finish(new GdtfError("Wrapper ZIP contains multiple GDTFs. Choose a package with exactly one fixture.")); return; }
+        const limit = wrapper ? gdtfLimits.upload : gdtfLimits.xml;
+        if (description.uncompressedSize > limit) { finish(new GdtfError(wrapper ? "The inner GDTF exceeds the 4 MB safety limit." : "GDTF description.xml exceeds the 1 MB limit.")); return; }
         const expected = description;
         zip!.openReadStream(expected, (error, openedStream) => {
           if (settled) { openedStream?.destroy(); return; }
@@ -68,7 +71,7 @@ function descriptionXml(buffer: Buffer): Promise<Buffer> {
           stream.on("error", () => finish(new GdtfError("GDTF description.xml is damaged.")));
           stream.on("data", (chunk: Buffer) => {
             size += chunk.length;
-            if (size > gdtfLimits.xml) { finish(new GdtfError("GDTF XML expansion exceeds the safety limit.")); return; }
+            if (size > limit) { finish(new GdtfError("GDTF payload expansion exceeds the safety limit.")); return; }
             chunks.push(chunk);
           });
           stream.on("end", () => {
@@ -155,9 +158,11 @@ function modeSummary(mode: XmlNode, geometries: XmlNode | undefined, knownVersio
 }
 
 export async function parseGdtf(buffer: Buffer, filename: string): Promise<GdtfReview> {
-  if (!/\.gdtf$/i.test(filename)) return reject("Choose a .gdtf file.");
-  if (!buffer.length || buffer.length > gdtfLimits.upload) return reject("Choose a non-empty GDTF file no larger than 2 MB.");
-  const root = parseXml(await descriptionXml(buffer));
+  const error = validateGdtfUpload({ name: filename, size: buffer.length });
+  if (error) return reject(error);
+  const budget = { expanded: 0, entries: 0 };
+  const inner = /\.gdtf\.zip$/i.test(filename) ? await archivePayload(buffer, true, budget) : buffer;
+  const root = parseXml(await archivePayload(inner, false, budget));
   const fixtures = children(root, "FixtureType");
   if (fixtures.length !== 1) return reject("GDTF must describe exactly one FixtureType.");
   const fixture = fixtures[0];

@@ -41,6 +41,6 @@ describe("Fixture physical fields", () => {
     const pages = await readFile(new URL("../src/components/content-pages.tsx", import.meta.url), "utf8");
     assert.match(editor, /record \? record\[field.name\] : initialValues\[field.name\]/);
     assert.match(editor, /step=\{field.name === "weight_lb" \? "any"/);
-    assert.match(pages, /Fixture quick specs/); assert.match(pages, /key === "weight_lb" \? " lb"/);
+    assert.match(pages, /Fixture quick specs/); assert.match(pages, /formatFixtureWeight\(stringify\(record\[key\]\)\)/);
   });
 });

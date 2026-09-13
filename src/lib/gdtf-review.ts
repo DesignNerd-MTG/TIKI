@@ -11,6 +11,13 @@ export type GdtfReview = {
   warnings: string[];
 };
 export type GdtfActionState = { review?: GdtfReview; error?: string };
+export const gdtfUploadLimit = 4 * 1024 * 1024;
+export function validateGdtfUpload(file: { name: string; size: number } | null | undefined) {
+  if (!file || !file.size) return "Choose a non-empty .gdtf or .gdtf.zip file.";
+  if (file.size > gdtfUploadLimit) return "Choose a GDTF file no larger than 4 MB.";
+  if (!/\.gdtf(?:\.zip)?$/i.test(file.name)) return "Choose a .gdtf or .gdtf.zip file.";
+  return "";
+}
 
 export function resolveGdtfManufacturer(value: string, manufacturers: FixtureManufacturer[]) {
   const key = normalizeManufacturerKey(value);
@@ -32,7 +39,7 @@ export function gdtfPrefill(review: GdtfReview, manufacturers: FixtureManufactur
     name: review.name,
     manufacturer: manufacturer?.name ?? review.manufacturer,
     manufacturer_id: manufacturer?.id ?? "",
-    field_notes: review.description,
+    field_notes: "",
     weight_lb: review.weightLb,
     ip_rating: "",
     preferred_mode: mode?.name ?? "",

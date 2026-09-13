@@ -17,7 +17,7 @@ import { RecheckReference } from "@/components/reference-controls";
 import { referenceCollection } from "@/lib/references";
 import { canAddFixtureManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
 import { FixtureCreate } from "@/components/fixture-create";
-import { fixtureQuickSpecs } from "@/lib/fixture-physical";
+import { fixtureQuickSpecs, formatFixtureWeight } from "@/lib/fixture-physical";
 
 function stringify(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -233,7 +233,7 @@ export async function ContentDetailPage({
           {kind === "fixture" && <section aria-label="Fixture quick specs">
             <p className="eyebrow">Quick specs</p>
             <dl className="detail-definition-list">
-              {fixtureQuickSpecs.map((key) => <div key={key}><dt>{config.fields.find((field) => field.name === key)?.label}</dt><dd>{stringify(record[key]) ? `${stringify(record[key])}${key === "weight_lb" ? " lb" : ""}` : "Not specified"}</dd></div>)}
+              {fixtureQuickSpecs.map((key) => <div key={key}><dt>{config.fields.find((field) => field.name === key)?.label}</dt><dd>{key === "weight_lb" ? formatFixtureWeight(stringify(record[key])) : stringify(record[key]) || "Not specified"}</dd></div>)}
             </dl>
           </section>}
           <div className="panel__heading"><div><p className="eyebrow">Record details</p><h2>What the team should know</h2></div></div>

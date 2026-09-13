@@ -7,3 +7,7 @@ export function kilogramsToPounds(value: number) {
   return value / 0.45359237;
 }
 export const fixtureQuickSpecs = ["preferred_mode", "dmx_footprint", "weight_lb", "ip_rating"];
+export function formatFixtureWeight(value: number | string) {
+  const weight = Number(value);
+  return validFixtureWeight(weight) ? `${weight.toFixed(1)} lb` : "Not specified";
+}

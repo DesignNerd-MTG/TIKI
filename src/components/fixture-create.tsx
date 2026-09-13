@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { ContentEditor } from "@/components/content-editor";
 import { reviewGdtfAction } from "@/app/(portal)/fixtures/new/gdtf-action";
-import { gdtfPrefill, resolveGdtfManufacturer, selectedGdtfMode, type GdtfReview } from "@/lib/gdtf-review";
+import { gdtfPrefill, resolveGdtfManufacturer, selectedGdtfMode, validateGdtfUpload, type GdtfReview } from "@/lib/gdtf-review";
+import { formatFixtureWeight } from "@/lib/fixture-physical";
 import type { FixtureManufacturer } from "@/lib/fixture-manufacturers";
 
 export function FixtureCreate({ statuses, defaultStatus, manufacturers, canAddManufacturer }: {
@@ -15,6 +16,11 @@ export function FixtureCreate({ statuses, defaultStatus, manufacturers, canAddMa
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const uploadGeneration = useRef(0);
+  function clearReview() {
+    uploadGeneration.current += 1;
+    setReview(null); setSelection(""); setEditing(false); setError("");
+  }
   const editorProps = { statuses, defaultStatus, manufacturers, canAddManufacturer };
   const resolved = review ? resolveGdtfManufacturer(review.manufacturer, manufacturers) : null;
   const mode = review ? selectedGdtfMode(review.modes, selection) : null;
@@ -22,7 +28,7 @@ export function FixtureCreate({ statuses, defaultStatus, manufacturers, canAddMa
   function choosePath(next: "manual" | "import") {
     if (path === next) return;
     if ((path === "manual" || editing) && !window.confirm("Switch creation path? Unsaved form edits will be discarded.")) return;
-    setPath(next); setReview(null); setEditing(false); setSelection(""); setError("");
+    setPath(next); clearReview();
   }
 
   return <div className="page-stack">
@@ -32,18 +38,24 @@ export function FixtureCreate({ statuses, defaultStatus, manufacturers, canAddMa
     </div>
     {path === "manual" ? <ContentEditor kind="fixture" {...editorProps} /> : <>
       {!editing && <form className="content-form" action={(form) => {
-        setError(""); setReview(null); setSelection("");
+        clearReview();
+        const generation = uploadGeneration.current;
+        const file = form.get("gdtf");
+        const validation = validateGdtfUpload(file instanceof File ? file : null);
+        if (validation) { setError(validation); return; }
         startTransition(async () => {
           try {
             const result = await reviewGdtfAction(form);
+            if (generation !== uploadGeneration.current) return;
             setReview(result.review ?? null); setError(result.error ?? "");
-          } catch { setError("Upload could not be completed. Check the 2 MB limit and your sign-in, or use Add Manually."); }
+          } catch { if (generation === uploadGeneration.current) setError("Upload could not be completed. Check the 4 MB limit and your sign-in, or use Add Manually."); }
         });
       }}>
-        <label className="form-field"><span>GDTF file</span><input name="gdtf" type="file" accept=".gdtf" required disabled={pending} onChange={(event) => {
+        <label className="form-field"><span>GDTF file</span><input name="gdtf" type="file" accept=".gdtf,.gdtf.zip" required onChange={(event) => {
+          clearReview();
           const file = event.target.files?.[0];
-          event.target.setCustomValidity(file && file.size > 2 * 1024 * 1024 ? "Choose a file no larger than 2 MB." : "");
-        }} /><small>Maximum 2 MB. The file is inspected in memory, not stored. Nothing creates a Fixture until you review and click Create.</small></label>
+          setError(validateGdtfUpload(file));
+        }} /><small>Maximum 4 MB. Accepts .gdtf or one .gdtf.zip wrapper containing exactly one GDTF. The file is inspected in memory, not stored. Nothing creates a Fixture until you review and click Create.</small></label>
         <button className="secondary-button" type="submit" disabled={pending}>{pending ? "Inspecting…" : "Review imported data"}</button>
       </form>}
       {error && <div className="notice notice--error" role="alert">{error}</div>}
@@ -54,8 +66,8 @@ export function FixtureCreate({ statuses, defaultStatus, manufacturers, canAddMa
             <div><dt>Fixture name</dt><dd>{review.name || "Not supplied"}</dd></div>
             <div><dt>Manufacturer from file</dt><dd>{review.manufacturer || "Not supplied"}</dd></div>
             <div><dt>Resolution</dt><dd>{resolved ? `Matched: ${resolved.name} — confirm in the form.` : "Manufacturer not currently in T.I.K.I. or ambiguous. Choose a canonical manufacturer in the review form. Editors/Admins may explicitly add a new brand."}</dd></div>
-            <div><dt>Description → Field notes</dt><dd>{review.description || "Not supplied"}</dd></div>
-            <div><dt>Weight</dt><dd>{review.weightLb === null ? "Not supplied" : `${review.weightLb} lb (converted from kg; editable)`}</dd></div>
+            <div><dt>GDTF Description</dt><dd>{review.description || "Not supplied"}<small>Source metadata only. Not automatically saved as Field Notes.</small></dd></div>
+            <div><dt>Weight</dt><dd>{review.weightLb === null ? "Not supplied" : `${formatFixtureWeight(review.weightLb)} (converted from kg; editable)`}</dd></div>
           </dl>
           <label className="form-field"><span>Choose Preferred Mode</span><select value={selection} onChange={(event) => setSelection(event.target.value)}>
             <option value="">Choose explicitly — no default mode</option>

@@ -16,6 +16,7 @@ const ids = {
   chauvet: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
 };
 let migrationSql = "";
+const laterMigrations = [];
 let beforeResources;
 
 async function as(role) {
@@ -37,6 +38,7 @@ before(async () => {
   for (const name of migrations) {
     const sql = await readFile(new URL(name, directory), "utf8");
     if (name === "202609140013_fixture_manufacturer_taxonomy.sql") migrationSql = sql;
+    else if (name > "202609140013_fixture_manufacturer_taxonomy.sql") laterMigrations.push(sql);
     else await db.exec(sql);
   }
 
@@ -54,11 +56,27 @@ before(async () => {
   await db.query("insert into public.additional_links(entity_kind,entity_id,section,label,url,position,created_by) values('fixture',$1,'fixture','Firmware','https://example.com/firmware',0,$2)", [ids.clay, ids.viewer]);
   beforeResources = (await db.query("select entity_kind,entity_id,section,label,url,position,created_by from public.additional_links order by id")).rows;
   await db.exec(migrationSql);
+  for (const sql of laterMigrations) await db.exec(sql);
 });
 
 after(async () => db.close());
 
 describe("Fixture manufacturer PostgreSQL migration and RLS", () => {
+  it("adds Filex only as an idempotent Fiilex alias without modifying fixtures or other taxonomy", async () => {
+    await db.exec("reset role");
+    const sql = await readFile(new URL("../supabase/migrations/202609140015_fiilex_gdtf_alias.sql", import.meta.url), "utf8");
+    const before = (await db.query("select * from public.fixture_manufacturers order by id")).rows;
+    const fixtures = (await db.query("select * from public.fixtures order by id")).rows;
+    await db.exec(sql); await db.exec(sql);
+    assert.deepEqual((await db.query("select * from public.fixture_manufacturers order by id")).rows, before);
+    assert.deepEqual((await db.query("select * from public.fixtures order by id")).rows, fixtures);
+    assert.equal(before.filter((row) => row.name === "Fiilex").length, 1);
+    assert.ok(before.find((row) => row.name === "Fiilex").aliases.includes("Filex"));
+    assert.equal(before.some((row) => row.name.toLowerCase() === "filex"), false);
+    await as("editor");
+    await assert.rejects(() => db.query("insert into public.fixture_manufacturers(name,slug,created_by) values('Filex','filex',$1)", [ids.editor]), /Similar manufacturers/);
+    await db.exec("reset role");
+  });
   it("seeds 48 canonical manufacturers with deliberate brand separation", async () => {
     const rows = (await db.query("select name from public.fixture_manufacturers order by name")).rows.map((row) => row.name);
     assert.equal(rows.length, 48);

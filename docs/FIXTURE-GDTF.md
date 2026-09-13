@@ -3,10 +3,12 @@
 ## Scope and rollout
 
 Built on manufacturer-taxonomy commit `d8a8d60`, on `codex/fixture-gdtf-specs`.
-This pass does not apply production migrations, merge, or deploy. Commit pushes
-use `[skip netlify]` to avoid automatic branch deployments.
+The refinement pass authorizes controlled rollout only after a clean read-only
+audit and production preflight. Feature pushes use `[skip netlify]`; the final
+approved main merge must not carry that marker.
 
-New forward migration: `202609140014_fixture_physical_specs.sql`.
+New forward migrations: `202609140014_fixture_physical_specs.sql` and
+`202609140015_fiilex_gdtf_alias.sql` (idempotently appends Filex to Fiilex aliases).
 Apply only after reviewed prerequisites, including manufacturer migration 013,
 are confirmed in the intended environment. The SQL is transactional, adds two
 nullable columns and CHECK constraints, and performs no UPDATE/DELETE/backfill.
@@ -43,8 +45,10 @@ Exact active canonical-name/alias matches select that manufacturer for review.
 Unknown names, duplicate matches, empty/overlong manufacturer text and plain
 Chauvet remain unresolved. The existing selector permits matching an existing
 brand; only Editor/Admin can explicitly add one. Final create rejects unresolved
-manufacturer IDs. Imported descriptions prefill Field notes (no parallel description
-column); labels identify that mapping.
+manufacturer IDs. GDTF Description is source metadata shown only during review;
+it never prefills or persists as Field Notes. Internal Field Notes remain blank
+until manually entered. Selecting a new file immediately clears review, selected
+mode and resolution; a generation guard ignores stale in-flight responses.
 
 ## Supported subset and deliberate limits
 
@@ -54,7 +58,7 @@ Unknown versions retain names/description for review but do not provide trusted
 physical values or footprints. Missing optional fields do not reject useful data.
 
 GDTF weight is kg, converted using kg / **0.45359237**, kept to 12 significant
-digits for review, and saved as editable numeric pounds. No geometry load/mass or
+digits for editing/storage, displayed to one decimal place in review/detail. No geometry load/mass or
 unrelated power value is treated as fixture weight. The supported standard has no
 reliable IP mapping: IP remains blank with an explicit warning; user selects it
 from authoritative specifications.
@@ -83,19 +87,36 @@ Specification references inspected:
 ## Untrusted file boundary
 
 `yauzl` streams only root description.xml from an in-memory archive, after checking
-the entire entry directory. Bounds: 2 MB upload, 1 MB XML, 1,024 entries, 32 MB
+the entire entry directory. Bounds: 4 MB upload, 1 MB XML, 1,024 entries, 32 MB
 declared total expansion, 200:1 maximum per-entry expansion ratio, 3-second archive
 inspection deadline. Duplicate case-insensitive paths, traversal/absolute/drive
 paths, backslashes, control characters, symlinks, encryption and unsupported
 compression are rejected. Streamed XML byte counts and CRC32 must agree with the
 archive. Streams close on error/timeout. Nothing is written to disk or Storage.
+`.gdtf.zip` permits exactly one outer wrapper containing exactly one `.gdtf`
+payload (at most 4 MB expanded). The same validated streaming/CRC boundary reads
+that payload and its XML. Entry/expanded totals are shared across both archives.
+Additional nested ZIPs, ambiguous payloads and missing payloads are rejected;
+there is no recursive archive traversal.
 
 `saxes` parses strict UTF-8 XML without a network/entity resolver. DOCTYPE and
 processing instructions are rejected. XML is bounded to 20,000 nodes, depth 64,
 64 attributes per node and 128 review modes. Malformed XML/Unicode errors are
 reported safely, without returning raw parser errors or logging file contents.
-No parsing code makes outbound requests. Existing 3 MB Server Action body limit
-accommodates a 2 MB file; larger requests also receive a safe client-side error.
+No parsing code makes outbound requests. The 5 MB Server Action transport ceiling
+allows a 4 MB file plus multipart overhead; the application still rejects every
+GDTF file above exactly 4,194,304 bytes with a T.I.K.I.-controlled error. Avatar
+actions keep their existing independent 2 MB file limit.
+
+Production read-only inspection confirmed `.env.local` points to project
+`ygjjjzlkiaaenmkvkewo`. Before this rollout, `fixture_manufacturers`,
+`fixtures.manufacturer_id`, `weight_lb`, and `ip_rating` are absent. The
+manufacturer-list warning is therefore the missing migration 013, not a fallback
+selector defect. 013 seeds canonical Fiilex and renames Wash Bricks to Battens &
+Tubes; 014 adds nullable physical specs; 015 adds the data-driven Filex alias.
+Production has no `supabase_migrations.schema_migrations` table, so preflight
+must reconcile actual schema/function definitions and prior applied evidence,
+not invent migration-history rows or run all migrations blindly.
 
 ## Verification and review
 

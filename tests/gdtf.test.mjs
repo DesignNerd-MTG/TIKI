@@ -85,7 +85,7 @@ describe("Safe GDTF review", () => {
     await assert.rejects(() => parseGdtf(Buffer.from("bad zip"), "bad.gdtf"), /ZIP archive/);
     await assert.rejects(() => parseGdtf(gdtfZip(gdtfXml()), "bad.xml"), /\.gdtf/);
     await assert.rejects(() => parseGdtf(Buffer.alloc(0), "bad.gdtf"), /non-empty/);
-    await assert.rejects(() => parseGdtf(Buffer.alloc(gdtfLimits.upload + 1), "bad.gdtf"), /2 MB/);
+    await assert.rejects(() => parseGdtf(Buffer.alloc(gdtfLimits.upload + 1), "bad.gdtf"), /4 MB/);
   });
   it("rejects absent root XML and duplicate archive entries", async () => {
     await assert.rejects(() => parseGdtf(zipFixture([{ name: "folder/description.xml", data: gdtfXml() }]), "bad.gdtf"), /archive root/);
