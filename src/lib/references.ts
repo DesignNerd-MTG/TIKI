@@ -1,5 +1,11 @@
 export const referenceCollections = [
   {
+    "id": "ldg-ldge-documents",
+    "name": "LDG / LDGE Documents",
+    "description": "Internal company documents, forms, policies, templates, handbooks, and shared operational resources.",
+    "parent_id": null
+  },
+  {
     "id": "control-systems",
     "name": "Control Systems",
     "description": "Consoles, nodes, manufacturer software, firmware, networking tools, and ecosystem-specific resources.",

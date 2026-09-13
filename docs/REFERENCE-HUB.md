@@ -4,7 +4,11 @@ Implementation branch: `feature/reference-hub`. The existing `link_items` table,
 
 ## Database rollout
 
-Apply `supabase/migrations/202609130001_reference_hub.sql` after the existing migration chain, first to a disposable/staging database. The automated tests execute the complete chain against local PostgreSQL (PGlite) without any cloud credentials.
+The original `supabase/migrations/202609130001_reference_hub.sql` has already been applied to production; do not edit or rerun it there. Fresh databases apply the complete ordered migration chain. The automated tests execute that chain against local PostgreSQL (PGlite) without any cloud credentials.
+
+The new forward migration `supabase/migrations/202609130002_ldg_documents_collection.sql` adds **LDG / LDGE Documents** (`ldg-ldge-documents`) as a top-level collection, bringing the current taxonomy to **11 top-level collections and three subcollections**. Its description is: “Internal company documents, forms, policies, templates, handbooks, and shared operational resources.” It is transactional and idempotent (`ON CONFLICT (id) DO NOTHING`), preserves existing taxonomy/content, and changes no permissions. Apply it before deploying the updated application; it has not been applied to production in this change. Leave the additive collection in place on application rollback, especially if references use it.
+
+This collection indexes links to canonical internal LDG/LDGE resources. The existing **TIKI Documents module remains separate and unchanged**; this collection does not replace it or introduce file storage.
 
 The migration is transactional and additive:
 
@@ -86,7 +90,7 @@ Seven pages have empty URL properties and native bookmark blocks returned as `un
 
 Mike must copy/export the actual bookmark destinations for these pages and supply the intended primary destination where a page contains multiple blocks. Fill `bookmark_url` in the private manifest, retain the page ID/date, validate, and rerun. No subcollection assignments have been guessed. Duplicate Notion tag rows with the same name are consolidated by the existing normalized tag system.
 
-Remaining operational steps: review/apply the additive migration in the intended database, import the 12 currently complete references (two batches), resolve/import the seven above, and review/publish drafts. These live database/content changes and authenticated browser verification have **not** been performed by this implementation pass. No merge to `main` or production deployment is included.
+Remaining operational steps: apply the new LDG/LDGE collection migration in the intended database, import the 12 currently complete references (two batches), resolve/import the seven above, and review/publish drafts. The original Reference Hub migration is already applied; no import or new migration application is included in this collection change. No merge to `main` or production deployment is included.
 
 ## Verification
 

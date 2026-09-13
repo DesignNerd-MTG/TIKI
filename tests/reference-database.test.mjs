@@ -3,6 +3,7 @@ import { before, after, describe, it } from "node:test";
 import { readFile, readdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { checkReference } from "../src/lib/reference-fetch.ts";
+import { referenceCollections } from "../src/lib/references.ts";
 
 const db=new PGlite();
 const ids={admin:"11111111-1111-4111-8111-111111111111",editor:"22222222-2222-4222-8222-222222222222",contributor:"33333333-3333-4333-8333-333333333333",viewer:"44444444-4444-4444-8444-444444444444",pending:"55555555-5555-4555-8555-555555555555"};
@@ -27,11 +28,37 @@ before(async()=>{
       const result=await db.query("insert into public.link_items(label,url,category,status,created_by,created_at,updated_at) values('Legacy link','https://public.com','Drafting','published',$1,'2020-01-01T12:30:00.123456Z','2021-02-03T04:05:06.654321Z') returning id",[ids.admin]);
       legacyId=result.rows[0].id;
     }
-    await db.exec(await readFile(new URL(name,directory),"utf8"));
+    if(name==="202609130002_ldg_documents_collection.sql"){
+      const taxonomy=(await db.query("select * from public.reference_collections order by id")).rows;
+      const links=(await db.query("select * from public.link_items order by id")).rows;
+      await db.exec(await readFile(new URL(name,directory),"utf8"));
+      assert.deepEqual((await db.query("select * from public.reference_collections where id <> 'ldg-ldge-documents' order by id")).rows,taxonomy);
+      assert.deepEqual((await db.query("select * from public.link_items order by id")).rows,links);
+    }else{
+      await db.exec(await readFile(new URL(name,directory),"utf8"));
+    }
   }
 });
 after(async()=>{await db.close();});
 describe("Reference PostgreSQL migration and RLS",()=>{
+  it("adds the LDG collection idempotently without changing existing taxonomy or links",async()=>{
+    await db.exec("reset role");
+    const before=(await db.query("select * from public.reference_collections order by id")).rows;
+    const links=(await db.query("select * from public.link_items order by id")).rows;
+    assert.equal(before.filter(row=>row.parent_id===null).length,11);
+    assert.equal(before.filter(row=>row.parent_id!==null).length,3);
+    for(const expected of referenceCollections){
+      const actual=before.find(row=>row.id===expected.id);
+      assert.deepEqual({id:actual.id,name:actual.name,description:actual.description,parent_id:actual.parent_id},expected);
+    }
+    const added=before.find(row=>row.id==="ldg-ldge-documents");
+    assert.equal(added.depth,0); assert.equal(added.parent_depth,null);
+    await db.exec(await readFile(new URL("../supabase/migrations/202609130002_ldg_documents_collection.sql",import.meta.url),"utf8"));
+    assert.deepEqual((await db.query("select * from public.reference_collections order by id")).rows,before);
+    assert.deepEqual((await db.query("select * from public.link_items order by id")).rows,links);
+    await as("viewer");
+    assert.equal((await db.query("select id from public.reference_collections where id='ldg-ldge-documents'")).rows.length,1);
+  });
   it("backfills dates without losing legacy records or editability",async()=>{
     await as("admin");
     const row=(await db.query("select * from public.link_items where id=$1",[legacyId])).rows[0];

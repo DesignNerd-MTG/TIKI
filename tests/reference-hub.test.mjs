@@ -27,7 +27,14 @@ describe("Reference capture and migration",()=>{
       assert.equal(validateContentInput("link","admin",{...input,date_added}).valid,false);
     }
     assert.equal(validCollectionPair("consoles","nodes-networking"),false);
-    assert.equal(referenceCollections.filter(c=>!c.parent_id).length,10);
+    assert.equal(referenceCollections.filter(c=>!c.parent_id).length,11);
+  });
+  it("accepts LDG / LDGE canonical resource links as a top-level collection",()=>{
+    const result=validateContentInput("link","contributor",{url:"https://example.com/handbook",collection_id:"ldg-ldge-documents"});
+    assert.equal(result.valid,true);
+    assert.equal(result.payload.category,"LDG / LDGE Documents");
+    assert.equal(validCollectionPair("ldg-ldge-documents",""),true);
+    assert.equal(validCollectionPair("ldg-ldge-documents","consoles"),false);
   });
   it("keeps existing legacy links editable and recheck permission identical to edit",()=>{
     const legacy={label:"Old Link",url:"https://public.com",category:"Operations",status:"published"};
