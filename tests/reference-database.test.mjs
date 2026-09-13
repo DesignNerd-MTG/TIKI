@@ -189,7 +189,7 @@ describe("Reference PostgreSQL migration and RLS",()=>{
     await db.exec("reset role");
     const before=(await db.query("select * from public.reference_collections order by id")).rows;
     const links=(await db.query("select * from public.link_items order by id")).rows;
-    assert.equal(before.filter(row=>row.parent_id===null).length,11);
+    assert.equal(before.filter(row=>row.parent_id===null).length,10);
     assert.equal(before.filter(row=>row.parent_id!==null).length,3);
     for(const expected of referenceCollections){
       const actual=before.find(row=>row.id===expected.id);

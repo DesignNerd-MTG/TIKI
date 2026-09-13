@@ -30,12 +30,6 @@ export const referenceCollections = [
     "parent_id": "control-systems"
   },
   {
-    "id": "fixtures-firmware",
-    "name": "Fixtures & Firmware",
-    "description": "Fixture families, firmware resources, manufacturer tools, and general fixture-reference material.",
-    "parent_id": null
-  },
-  {
     "id": "drafting",
     "name": "Drafting",
     "description": "Vectorworks, CAD, plugins, templates, symbols, and drafting workflow resources.",
@@ -90,7 +84,7 @@ export function referenceCollection(id: unknown) {
 }
 
 export const legacyCollectionMap: Record<string, string> = {
-  "Fixtures & Firmware": "fixtures-firmware", "Consoles/Nodes/Software": "control-systems",
+  "Fixtures & Firmware": "unsorted", "Consoles/Nodes/Software": "control-systems",
   "Reference": "technical-reference", "Drafting": "drafting", "Misc": "bucket-fun",
   "Articles": "press-room", "Inspiration": "inspiration", "Utility": "software-utilities",
   "Useful Products": "useful-products", "Unsorted": "unsorted",
