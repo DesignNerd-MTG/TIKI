@@ -134,6 +134,12 @@ export function ContentEditor({
                   {hasLegacySelectValue && <option value={existingSelectValue}>{existingSelectValue} (existing value)</option>}
                   {selectOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
                 </select>
+              ) : field.type === "boolean-select" ? (
+                <select name={field.name} defaultValue={typeof value === "boolean" ? String(value) : ""} aria-invalid={Boolean(error)}>
+                  <option value="">Not specified</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
               ) : field.type === "checkbox" ? (
                 <span className="check-control"><input name={field.name} type="checkbox" value="true" defaultChecked={value === true} /> Yes</span>
               ) : (

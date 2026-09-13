@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
-import { contentConfigs, countryOptions, filingDestinationKinds, fixtureTypeOptions, getCountryLabel, getRecordDetail, getRecordMeta, getRecordTitle, getStatusLabel } from "../src/lib/content.ts";
+import { contentConfigs, countryOptions, filingDestinationKinds, fixturePowerInputOptions, fixtureTypeOptions, getCountryLabel, getRecordDetail, getRecordMeta, getRecordTitle, getStatusLabel } from "../src/lib/content.ts";
 import { readAdditionalLinks, validateAdditionalLinks } from "../src/lib/additional-links.ts";
 import { allowedStatuses, canArchiveContent, canCreateContent, canDeleteContent, canEditContent, canSetStatus } from "../src/lib/content-rules.ts";
 import { buildSearchPattern, isSafeExternalUrl, isUuid, normalizeTags, slugifyTag, validateContentInput } from "../src/lib/content-validation.ts";
@@ -69,11 +69,13 @@ describe("content validation and failure handling", () => {
     const result = validateContentInput("fixture", "contributor", {
       name: "MVP Test Fixture", manufacturer: "Test", fixture_type: "Mover Wash", preferred_mode: "Extended",
       dmx_footprint: "32", typical_use: "Testing", power_note: "", control_note: "", field_notes: "",
+      power_input_connector: "powerCON TRUE1 TOP", power_passthrough: "true",
       fixture_page_url: "", dmx_chart_url: "https://example.com/chart", manual_url: "", ies_url: "https://example.com/fixture.ies", showfile_url: "", status: "draft", tags: "LED, led, Broadcast", revision_note: "Initial test record",
     });
     assert.equal(result.valid, true);
     if (result.valid) {
       assert.equal(result.payload.dmx_footprint, 32);
+      assert.equal(result.payload.power_passthrough, true);
       assert.deepEqual(result.tags, ["LED", "Broadcast"]);
     }
   });
@@ -91,6 +93,25 @@ describe("content validation and failure handling", () => {
     assert.equal(fixtureTypeOptions.length, 22);
     assert.ok(fixtureTypeOptions.some((option) => option.value === "LED Strobe/Blinder"));
     assert.ok(fixtureTypeOptions.some((option) => option.value === "Conventional Strobe/Blinder"));
+  });
+
+  it("normalizes fixture power input and passthrough without guessing legacy values", () => {
+    const input = {
+      name: "Power Test", manufacturer: "Test", fixture_type: "LED PAR", preferred_mode: "", dmx_footprint: "",
+      power_input_connector: "Stage Pin / Bates", power_passthrough: "false", power_note: "120 V", control_note: "", field_notes: "",
+      fixture_page_url: "", manual_url: "", dmx_chart_url: "", ies_url: "", showfile_url: "", status: "draft", tags: "", revision_note: "",
+    };
+    const valid = validateContentInput("fixture", "contributor", input);
+    assert.equal(valid.valid, true);
+    if (valid.valid) assert.equal(valid.payload.power_passthrough, false);
+    const unknownConnector = validateContentInput("fixture", "contributor", { ...input, power_input_connector: "Mystery plug" });
+    assert.equal(unknownConnector.valid, false);
+    if (!unknownConnector.valid) assert.match(unknownConnector.fieldErrors.power_input_connector, /listed power input/i);
+    const unknownPassthrough = validateContentInput("fixture", "contributor", { ...input, power_passthrough: "maybe" });
+    assert.equal(unknownPassthrough.valid, false);
+    if (!unknownPassthrough.valid) assert.match(unknownPassthrough.fieldErrors.power_passthrough, /Yes or No/i);
+    assert.ok(fixturePowerInputOptions.some((option) => option.value === "powerCON 20 A (blue/gray)"));
+    assert.ok(fixturePowerInputOptions.some((option) => option.value === "IEC 60309 / Pin & Sleeve"));
   });
 
   it("returns field-specific errors for missing names and unsafe URLs", () => {
@@ -198,6 +219,7 @@ describe("tags, search, and record presentation", () => {
     const editor = await readFile(new URL("../src/components/content-editor.tsx", import.meta.url), "utf8");
     const search = await readFile(new URL("../src/app/(portal)/search/page.tsx", import.meta.url), "utf8");
     const sql = await readFile(new URL("../supabase/migrations/202609140009_fixture_catalog_fields.sql", import.meta.url), "utf8");
+    const powerSql = await readFile(new URL("../supabase/migrations/202609140010_fixture_power_fields.sql", import.meta.url), "utf8");
     const typeField = fixtureFields.find((field) => field.name === "fixture_type");
     assert.equal(typeField?.type, "select");
     assert.equal(typeField?.required, true);
@@ -216,6 +238,10 @@ describe("tags, search, and record presentation", () => {
     assert.match(search, /fixture_type\.ilike/);
     assert.match(sql, /add column if not exists ies_url text/i);
     assert.match(sql, /create index if not exists fixtures_type_name_idx/i);
+    assert.deepEqual(fixtureFields.find((field) => field.name === "power_input_connector")?.options?.slice(1), fixturePowerInputOptions);
+    assert.equal(fixtureFields.find((field) => field.name === "power_passthrough")?.type, "boolean-select");
+    assert.match(powerSql, /add column if not exists power_input_connector text/i);
+    assert.match(powerSql, /add column if not exists power_passthrough boolean/i);
     assert.equal(fixtureFields.some((field) => field.name === "typical_use"), false);
     assert.equal(showFields.some((field) => field.name === "primary_link"), false);
     assert.ok(showFields.some((field) => field.name === "dropbox_url" && field.label === "Dropbox Link"));

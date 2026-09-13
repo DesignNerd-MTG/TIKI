@@ -47,6 +47,13 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
       payload[field.name] = input[field.name] === true || input[field.name] === "true";
       continue;
     }
+    if (field.type === "boolean-select") {
+      const value = String(input[field.name] ?? "").trim();
+      if (field.required && !value) errors[field.name] = `${field.label} is required.`;
+      if (value && value !== "true" && value !== "false") errors[field.name] = `Choose Yes or No for ${field.label.toLowerCase()}.`;
+      payload[field.name] = value ? value === "true" : null;
+      continue;
+    }
     const value = String(input[field.name] ?? "").trim();
     if (field.required && !value) errors[field.name] = `${field.label} is required.`;
     if (field.maxLength && value.length > field.maxLength) errors[field.name] = `${field.label} is too long.`;
