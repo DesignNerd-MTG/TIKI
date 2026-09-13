@@ -7,7 +7,7 @@ import { contentConfigs, filingDestinationKinds, type FilingDestinationKind } fr
 import { hasMinimumRole } from "@/lib/access";
 import { readAdditionalLinks, sectionsForKind, type AdditionalLink } from "@/lib/additional-links";
 import { canArchiveContent, canCreateContent, canDeleteContent, canEditContent } from "@/lib/content-rules";
-import { isUuid, validateContentInput, type ContentInput } from "@/lib/content-validation";
+import { isUuid, normalizeExternalUrl, validateContentInput, type ContentInput } from "@/lib/content-validation";
 import { getIdentityAndProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { EntityKind, ManagedRecord } from "@/lib/types";
@@ -20,6 +20,9 @@ export type ContentActionState = {
   message: string;
   fieldErrors?: Record<string, string>;
   redirectTo?: string;
+  values?: ContentInput;
+  additionalLinks?: AdditionalLink[];
+  submissionKey?: string;
 };
 
 export type ManufacturerActionState = {
@@ -45,7 +48,8 @@ function readInput(formData: FormData, kind: EntityKind): ContentInput {
     revision_note: String(formData.get("revision_note") ?? ""),
   };
   for (const field of contentConfigs[kind].fields) {
-    input[field.name] = field.type === "checkbox" ? formData.get(field.name) === "true" : String(formData.get(field.name) ?? "");
+    const value = String(formData.get(field.name) ?? "");
+    input[field.name] = field.type === "checkbox" ? formData.get(field.name) === "true" : field.type === "url" ? normalizeExternalUrl(value) : value;
   }
   return input;
 }
@@ -110,36 +114,40 @@ export async function addFixtureManufacturerAction(formData: FormData): Promise<
 export async function saveContentAction(_previous: ContentActionState, formData: FormData): Promise<ContentActionState> {
   const kindValue = String(formData.get("_entity_kind") ?? "");
   if (!isEntityKind(kindValue)) return { ok: false, message: "Unknown content type." };
-
-  const { identity, profile } = await getIdentityAndProfile();
-  if (!identity || !profile?.active) return { ok: false, message: "Your session is no longer active. Sign in again." };
-
   const kind = kindValue;
   const config = contentConfigs[kind];
   const id = String(formData.get("id") ?? "").trim();
+  const input = readInput(formData, kind);
+  input._manufacturer_id = String(formData.get("manufacturer_id") ?? "").trim();
+  const additionalLinks = readAdditionalLinks(formData, kind);
+  const sketchFile = kind === "napkin" && !id ? formData.get("sketch") : null;
+  const hasNewSketch = sketchFile instanceof File && sketchFile.size > 0;
+  if (kind === "napkin") input._has_sketch = hasNewSketch ? "true" : "false";
+  const failure = (message: string, fieldErrors?: Record<string, string>): ContentActionState => ({
+    ok: false, message, fieldErrors, values: input, additionalLinks: additionalLinks.links, submissionKey: crypto.randomUUID(),
+  });
+
+  const { identity, profile } = await getIdentityAndProfile();
+  if (!identity || !profile?.active) return failure("Your session is no longer active. Sign in again.");
+
   const supabase = await createClient();
   let existing: ManagedRecord | null = null;
 
   if (id) {
     const result = await supabase.from(config.table).select("*").eq("id", id).maybeSingle();
-    if (result.error || !result.data) return { ok: false, message: "That record could not be loaded. It may have moved or your access changed." };
+    if (result.error || !result.data) return failure("That record could not be loaded. It may have moved or your access changed.");
     existing = result.data as ManagedRecord;
-    if (!canEditContent(profile.role, identity.id, kind, existing)) return { ok: false, message: "Your role cannot edit this record." };
+    if (!canEditContent(profile.role, identity.id, kind, existing)) return failure("Your role cannot edit this record.");
   } else if (!canCreateContent(profile.role, kind)) {
-    return { ok: false, message: "Your role cannot create this type of content." };
+    return failure("Your role cannot create this type of content.");
   }
 
-  const input = readInput(formData, kind);
-  const sketchFile = kind === "napkin" && !existing ? formData.get("sketch") : null;
-  const hasNewSketch = sketchFile instanceof File && sketchFile.size > 0;
-  if (kind === "napkin") input._has_sketch = hasNewSketch ? "true" : "false";
   if (kind === "link" && existing && !String(input.date_added ?? "").trim()) {
     input.date_added = String(existing.date_added || existing.created_at);
   }
   const validation = validateContentInput(kind, profile.role, input, existing?.status, existing ?? undefined);
-  if (!validation.valid) return { ok: false, message: validation.message, fieldErrors: validation.fieldErrors };
-  const additionalLinks = readAdditionalLinks(formData, kind);
-  if (!additionalLinks.valid) return { ok: false, message: "Check the additional links and try again.", fieldErrors: { additional_links: additionalLinks.message } };
+  if (!validation.valid) return failure(validation.message, validation.fieldErrors);
+  if (!additionalLinks.valid) return failure("Check the additional links and try again.", { additional_links: additionalLinks.message });
 
   const payload: Record<string, unknown> = { ...validation.payload };
   let sketchBytes: Uint8Array | null = null;
@@ -147,19 +155,19 @@ export async function saveContentAction(_previous: ContentActionState, formData:
     try {
       sketchBytes = await normalizeNapkinSketch(new Uint8Array(await sketchFile.arrayBuffer()), sketchFile.type);
     } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : "The sketch could not be processed.", fieldErrors: { sketch: "Draw the sketch again and retry." } };
+      return failure(error instanceof Error ? error.message : "The sketch could not be processed.", { sketch: "Draw the sketch again and retry." });
     }
   }
   if (kind === "fixture") {
-    const manufacturerId = String(formData.get("manufacturer_id") ?? "").trim();
+    const manufacturerId = String(input._manufacturer_id ?? "");
     const unchangedUnresolved = Boolean(existing && !existing.manufacturer_id && String(existing.manufacturer ?? "") === String(payload.manufacturer ?? ""));
     if (!manufacturerId && !unchangedUnresolved) {
-      return { ok: false, message: "Choose a canonical manufacturer.", fieldErrors: { manufacturer: "Search for and choose a listed manufacturer." } };
+      return failure("Choose a canonical manufacturer.", { manufacturer: "Search for and choose a listed manufacturer." });
     }
     if (manufacturerId) {
-      if (!isUuid(manufacturerId)) return { ok: false, message: "Choose a canonical manufacturer.", fieldErrors: { manufacturer: "That manufacturer choice is invalid." } };
+      if (!isUuid(manufacturerId)) return failure("Choose a canonical manufacturer.", { manufacturer: "That manufacturer choice is invalid." });
       const manufacturerResult = await supabase.from("fixture_manufacturers").select("id,name").eq("id", manufacturerId).eq("active", true).maybeSingle();
-      if (manufacturerResult.error || !manufacturerResult.data) return { ok: false, message: "Choose an active canonical manufacturer.", fieldErrors: { manufacturer: "That manufacturer is unavailable. Refresh and choose again." } };
+      if (manufacturerResult.error || !manufacturerResult.data) return failure("Choose an active canonical manufacturer.", { manufacturer: "That manufacturer is unavailable. Refresh and choose again." });
       payload.manufacturer_id = manufacturerResult.data.id;
       payload.manufacturer = manufacturerResult.data.name;
     } else {
@@ -170,7 +178,7 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   if (kind === "link" && !payload.url) Object.assign(payload, { site_name:null, fetched_title:null, favicon_url:null, preview_image_url:null, last_checked_at:null, final_url:null, link_health:"could_not_verify" });
   if (!existing) payload.created_by = identity.id;
   if (kind === "napkin" && String(payload.status) === "converted" && existing?.status !== "converted") {
-    return { ok: false, message: "Use Approve & File so T.I.K.I. can create and link the destination record." };
+    return failure("Use Approve & File so T.I.K.I. can create and link the destination record.");
   }
   if (["fixture", "show", "link", "document", "location", "drink"].includes(kind) && payload.status === "published") {
     payload.verified_by = identity.id;
@@ -184,7 +192,7 @@ export async function saveContentAction(_previous: ContentActionState, formData:
     payload.id = napkinId;
     payload.sketch_path = uploadedSketchPath;
     const upload = await supabase.storage.from(napkinSketchBucket).upload(uploadedSketchPath, sketchBytes, { contentType: "image/png", cacheControl: "0", upsert: false });
-    if (upload.error) return { ok: false, message: `The sketch could not be stored. ${upload.error.message}`, fieldErrors: { sketch: "Try drawing or storing the sketch again." } };
+    if (upload.error) return failure(`The sketch could not be stored. ${upload.error.message}`, { sketch: "Try drawing or storing the sketch again." });
   }
 
   const result = existing
@@ -192,7 +200,7 @@ export async function saveContentAction(_previous: ContentActionState, formData:
     : await supabase.from(config.table).insert(payload).select("id").single();
   if (result.error || !result.data) {
     if (uploadedSketchPath) await supabase.storage.from(napkinSketchBucket).remove([uploadedSketchPath]);
-    return { ok: false, message: `T.I.K.I. could not save this ${config.singular.toLowerCase()}. ${result.error?.message ?? "Try again."}` };
+    return failure(`T.I.K.I. could not save this ${config.singular.toLowerCase()}. ${result.error?.message ?? "Try again."}`);
   }
 
   const recordId = String(result.data.id);
@@ -233,18 +241,20 @@ export async function fileNapkinAction(_previous: ContentActionState, formData: 
   const [targetKindValue, referenceCollectionId, referenceSubcollectionId] = filingDestination.split(":");
   const recordTitle = String(formData.get("record_title") ?? "").trim();
   const reviewNote = String(formData.get("review_note") ?? "").trim();
+  const values: ContentInput = { filing_destination: filingDestination, record_title: recordTitle, review_note: reviewNote };
+  const failure = (message: string, fieldErrors?: Record<string, string>): ContentActionState => ({ ok: false, message, fieldErrors, values, submissionKey: crypto.randomUUID() });
   const fieldErrors: Record<string, string> = {};
 
-  if (!isUuid(id)) return { ok: false, message: "That Napkin could not be identified." };
+  if (!isUuid(id)) return failure("That Napkin could not be identified.");
   if (!isFilingDestination(targetKindValue)) fieldErrors.target_kind = "Choose where this knowledge belongs.";
   if (!recordTitle) fieldErrors.record_title = "Give the filed record a useful title.";
   else if (recordTitle.length > 160) fieldErrors.record_title = "Keep the title to 160 characters or fewer.";
   if (reviewNote.length > 500) fieldErrors.review_note = "Keep the approval note to 500 characters or fewer.";
-  if (Object.keys(fieldErrors).length) return { ok: false, message: "Check the highlighted fields and try again.", fieldErrors };
+  if (Object.keys(fieldErrors).length) return failure("Check the highlighted fields and try again.", fieldErrors);
 
   const { identity, profile } = await getIdentityAndProfile();
-  if (!identity || !profile?.active) return { ok: false, message: "Your session is no longer active. Sign in again." };
-  if (profile.role !== "editor" && profile.role !== "admin") return { ok: false, message: "Only Editors and Admins can approve and file Napkins." };
+  if (!identity || !profile?.active) return failure("Your session is no longer active. Sign in again.");
+  if (profile.role !== "editor" && profile.role !== "admin") return failure("Only Editors and Admins can approve and file Napkins.");
 
   const targetKind = targetKindValue as FilingDestinationKind;
   const supabase = await createClient();
@@ -264,7 +274,7 @@ export async function fileNapkinAction(_previous: ContentActionState, formData: 
     const friendly = detail.includes("already filed")
         ? "This Napkin has already been filed. Refresh the page to see its destination."
         : `T.I.K.I. could not file this Napkin. ${detail}`;
-    return { ok: false, message: friendly };
+    return failure(friendly);
   }
 
   const destination = contentConfigs[targetKind];

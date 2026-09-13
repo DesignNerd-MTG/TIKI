@@ -23,6 +23,13 @@ export function slugifyTag(value: string) {
   return value.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50);
 }
 
+export function normalizeExternalUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || /^[a-z][a-z0-9+.-]*:/i.test(trimmed) || trimmed.startsWith("//")) return trimmed;
+  const domain = /^(?:www\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?::\d{1,5})?(?:[/?#].*)?$/i;
+  return domain.test(trimmed) ? `https://${trimmed}` : trimmed;
+}
+
 export function isSafeExternalUrl(value: string) {
   if (!value) return true;
   try {
@@ -38,7 +45,10 @@ export function isUuid(value: string) {
 }
 
 export function validateContentInput(kind: EntityKind, role: AppRole, input: ContentInput, previousStatus?: string, previousRecord?: Record<string, unknown>): ValidationResult {
-  if (kind === "link") input = referenceDefaults(input);
+  if (kind === "link") {
+    input = { ...input, url: normalizeExternalUrl(String(input.url ?? "")) };
+    input = referenceDefaults(input);
+  }
   const config = contentConfigs[kind];
   const errors: Record<string, string> = {};
   const payload: Record<string, string | number | boolean | null> = {};
@@ -55,11 +65,12 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
       payload[field.name] = value ? value === "true" : null;
       continue;
     }
-    const value = String(input[field.name] ?? "").trim();
+    const rawValue = String(input[field.name] ?? "").trim();
+    const value = field.type === "url" ? normalizeExternalUrl(rawValue) : rawValue;
     if (field.required && !value) errors[field.name] = `${field.label} is required.`;
     if (field.maxLength && value.length > field.maxLength) errors[field.name] = `${field.label} is too long.`;
     if (field.type === "url" && value.length > 2048) errors[field.name] = "URL must be 2,048 characters or fewer.";
-    if (field.type === "url" && value && !isSafeExternalUrl(value)) errors[field.name] = "Use a complete http:// or https:// URL.";
+    if (field.type === "url" && value && !isSafeExternalUrl(value)) errors[field.name] = "Use a valid web address or http:// or https:// URL.";
     if (field.type === "date" && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) errors[field.name] = "Use a valid date.";
     if (field.type === "select" && value && field.options && !field.options.some((option) => option.value === value)) {
       const unchangedLegacyValue = field.name !== "ip_rating" && previousRecord && String(previousRecord[field.name] ?? "") === value;

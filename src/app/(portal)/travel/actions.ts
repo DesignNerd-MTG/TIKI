@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getIdentityAndProfile } from "@/lib/auth";
-import { isSafeExternalUrl } from "@/lib/content-validation";
+import { isSafeExternalUrl, normalizeExternalUrl } from "@/lib/content-validation";
 import { createClient } from "@/lib/supabase/server";
 
 export type TravelActionState = { ok: boolean; message: string; fieldErrors?: Record<string, string> };
@@ -14,13 +14,13 @@ export async function saveTravelAction(_previous: TravelActionState, formData: F
 
   const name = String(formData.get("name") ?? "").trim();
   const details = String(formData.get("details") ?? "").trim();
-  const flightyUrl = String(formData.get("flighty_url") ?? "").trim();
+  const flightyUrl = normalizeExternalUrl(String(formData.get("flighty_url") ?? ""));
   const shareFlighty = formData.get("share_flighty") === "true";
   const shareBooking = formData.get("share_booking") === "true";
   const fieldErrors: Record<string, string> = {};
   if (name.length > 160) fieldErrors.name = "Keep the name to 160 characters or fewer.";
   if (details.length > 12000) fieldErrors.details = "Keep travel details to 12,000 characters or fewer.";
-  if (flightyUrl.length > 2048 || (flightyUrl && !isSafeExternalUrl(flightyUrl))) fieldErrors.flighty_url = "Use a complete http:// or https:// URL.";
+  if (flightyUrl.length > 2048 || (flightyUrl && !isSafeExternalUrl(flightyUrl))) fieldErrors.flighty_url = "Use a valid web address or http:// or https:// URL.";
   if (Object.keys(fieldErrors).length) return { ok: false, message: "Check the highlighted fields and try again.", fieldErrors };
 
   const supabase = await createClient();
