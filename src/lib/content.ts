@@ -134,6 +134,7 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
       { name: "manual_url", label: "Manual Link", type: "url", placeholder: "https://…" },
       { name: "dmx_chart_url", label: "DMX Chart Link", type: "url", placeholder: "https://…" },
       { name: "ies_url", label: "IES File Link", type: "url", placeholder: "https://…" },
+      { name: "photometrics_url", label: "Photometrics Link", type: "url", placeholder: "https://…" },
       { name: "showfile_url", label: "Link to Showfile with Fixture Included", type: "url", placeholder: "https://…", wide: true },
     ],
   },
