@@ -4,6 +4,7 @@ import { ArrowLeft, Eye } from "lucide-react";
 
 import { DashboardView } from "@/components/dashboard-view";
 import { Brand } from "@/components/brand";
+import { requireActiveProfile } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Portal preview" };
 
@@ -16,7 +17,8 @@ const previewSnapshot = {
   ],
 };
 
-export default function PreviewPage() {
+export default async function PreviewPage() {
+  await requireActiveProfile();
   return (
     <div className="preview-page">
       <header className="preview-bar">

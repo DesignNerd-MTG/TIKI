@@ -48,6 +48,58 @@ before(async()=>{
 });
 after(async()=>{await db.close();});
 describe("Reference PostgreSQL migration and RLS",()=>{
+  it("lets active members supply only their own public name without changing role or exposing private fields",async()=>{
+    await as('viewer');
+    await db.query("select public.set_directory_display_name($1)",['  Mike Grabowski  ']);
+    const own=(await db.query('select full_name,role,active from public.profiles where id=$1',[ids.viewer])).rows[0];
+    assert.deepEqual(own,{full_name:'Mike Grabowski',role:'viewer',active:true});
+    await assert.rejects(()=>db.query("select public.set_directory_display_name('   ')"));
+    await db.query("insert into public.profile_social_links(profile_id,label,url) values($1,'Instagram','https://instagram.com/namecheck')",[ids.viewer]);
+    for(const role of ['viewer','contributor','admin']) {
+      await as(role);
+      const rows=(await db.query('select * from public.social_directory()')).rows;
+      assert.equal(rows.find(r=>r.profile_id===ids.viewer).display_name,'Mike Grabowski');
+      assert.deepEqual(Object.keys(rows[0]).sort(),['display_name','id','label','profile_id','url']);
+    }
+    await as('viewer');await db.query('delete from public.profile_social_links where profile_id=$1',[ids.viewer]);
+    await as('pending');await assert.rejects(()=>db.query("select public.set_directory_display_name('Pending')"),e=>e.code==='42501');
+    await db.exec('reset role; set role anon');
+    await assert.rejects(()=>db.query("select public.set_directory_display_name('Guest')"),e=>e.code==='42501');
+    await db.exec('reset role');
+  });
+  it("anonymous and inactive users cannot read department content directly or through reference RPCs",async()=>{
+    await db.exec('reset role');
+    const tables=(await db.query("select tablename from pg_tables where schemaname='public' and tablename not in ('profiles','portal_settings')")).rows;
+    for(const actor of ['anon','pending']) {
+      if(actor==='pending') await as('pending');
+      else await db.exec("select set_config('request.jwt.claim.sub','',false); set role anon");
+      for(const {tablename} of tables) {
+        try { assert.equal((await db.query(`select * from public."${tablename}"`)).rows.length,0,`${actor}: ${tablename}`); }
+        catch(error) { if(error.code!=='42501') throw error; }
+      }
+      for(const sql of ["select * from public.search_references('')",'select * from public.reference_collection_counts()','select * from public.social_directory()']) {
+        try { assert.equal((await db.query(sql)).rows.length,0,actor+sql); }
+        catch(error) { if(error.code!=='42501') throw error; }
+      }
+      await db.exec('reset role');
+    }
+  });
+  it("signup cannot self-activate and private Travel rows stay owner-only even for Admin",async()=>{
+    await db.exec('reset role');
+    const fresh='66666666-6666-4666-8666-666666666666';
+    await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'signup@test.invalid',$2)",[fresh,JSON.stringify({role:'admin',active:true,full_name:'New member'})]);
+    assert.deepEqual((await db.query('select role,active from public.profiles where id=$1',[fresh])).rows[0],{role:'viewer',active:false});
+    await as('viewer');
+    await db.query("insert into public.travel_profiles(user_id,details) values($1,'PRIVATE_TRAVEL_SENTINEL')",[ids.viewer]);
+    for(const actor of ['admin','contributor','pending']) {
+      await as(actor);
+      assert.equal((await db.query('select * from public.travel_profiles where user_id=$1',[ids.viewer])).rows.length,0);
+      assert.equal((await db.query("select * from public.search_references('PRIVATE_TRAVEL_SENTINEL')")).rows.length,0);
+    }
+    await db.exec('reset role');
+    await db.query('delete from public.travel_profiles where user_id=$1',[ids.viewer]);
+    await db.query('delete from auth.users where id=$1',[fresh]);
+  });
   it("denies anonymous function execution even with a forged subject and Supabase default grants",async()=>{
     await db.exec("reset role");
     await db.query("select set_config('request.jwt.claim.sub',$1,false)",[ids.admin]);

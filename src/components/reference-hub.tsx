@@ -3,7 +3,7 @@ import { requireActiveProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { canCreateContent } from "@/lib/content-rules";
 import { referenceCollections, referenceCollection } from "@/lib/references";
-import { ReferenceCard } from "@/components/reference-card";
+import { ReferenceResults } from "@/components/reference-results";
 import { DatabaseNotice, EmptyState, PageHeader } from "@/components/ui";
 import type { ManagedRecord } from "@/lib/types";
 
@@ -45,7 +45,8 @@ export async function ReferenceHub({ params }: { params: ReferenceParams }) {
         return <Link className="panel detail-panel reference-collection" href={item.parent_id ? "/links?collection="+item.parent_id+"&subcollection="+item.id : "/links?collection="+item.id} key={item.id}><h2>{item.name}</h2><p>{item.description}</p><span>{count} references</span></Link>;
       })}</section>}
       <section><div className="section-heading"><h2>{archived ? "Archived references" : query ? "Matching references" : selected ? "References in this collection" : "Recently added"}</h2></div>
-        {records.length ? <div className="reference-grid">{records.slice(0,50).map((record) => <ReferenceCard key={record.id} record={record} tags={tagMap.get(record.id)} />)}</div> : <EmptyState title="No references here yet" description="Save a URL to Unsorted, or choose another collection or search term." />}
+        <ReferenceResults records={records.slice(0,50)} tags={Object.fromEntries(tagMap)} />
+        {!records.length && <EmptyState title="No references here yet" description="Save a URL to Unsorted, or choose another collection or search term." />}
       </section>
       <nav className="page-actions" aria-label="Reference pages">{page > 0 && <Link href={href(page-1)}>Previous</Link>}{records.length > 50 && <Link href={href(page+1)}>Next</Link>}</nav>
     </>}
