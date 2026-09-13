@@ -4,7 +4,16 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import ts from 'typescript';
 import {groupSocialAccounts,directoryName} from '../src/lib/social-directory.ts';
+import {referenceSort,referenceSorts} from '../src/lib/reference-sort.ts';
 const read=p=>readFile(new URL(p,import.meta.url),'utf8');
+it('sort URL defaults and toolbar retain filters, archive and paging state without changing global search',async()=>{
+  assert.equal(referenceSort(),'title-asc');assert.equal(referenceSort('bad'),'title-asc');
+  for(const key of Object.keys(referenceSorts))assert.equal(referenceSort(key),key);
+  const hub=await read('../src/components/reference-hub.tsx');
+  assert.match(hub,/page: String\(number\), sort/);assert.match(hub,/sort_order: sort/);
+  for(const name of ['q','collection','subcollection','view','sort'])assert.ok(hub.includes(`name="${name}"`));
+  assert.match(hub,/sortControl=/);assert.match(await read('../src/app/(portal)/search/page.tsx'),/rpc\("search_references"/);
+});
 it('sorts actual names and repeated accounts deterministically independent of viewing identity',()=>{
   const row=(id,profile_id,display_name,label,url)=>({id,profile_id,display_name,label,url});
   const rows=[row('z','2','alice','Personal Website','https://z.com'),row('b','2','alice','Instagram','https://instagram.com/z'),row('a','2','alice','Instagram','https://instagram.com/a'),row('t','2','alice','TikTok','https://tiktok.com/@a'),row('1','1','Alice','Instagram','https://instagram.com/b'),row('3','3','Bob','Instagram','https://instagram.com/c')];

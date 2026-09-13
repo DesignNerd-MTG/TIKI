@@ -48,6 +48,31 @@ before(async()=>{
 });
 after(async()=>{await db.close();});
 describe("Reference PostgreSQL migration and RLS",()=>{
+  it("sorts the full filtered Reference index before paging with historical dates and stable ties",async()=>{
+    await as('admin');
+    const rows=[];
+    for(let i=0;i<55;i++) {
+      rows.push((await db.query("insert into public.link_items(label,url,description,collection_id,subcollection_id,date_added,status,created_by) values($1,'https://example.com','SORT_TEST','control-systems','consoles',$2,'published',$3) returning id,label,date_added",[i<2?' alpha ':`Title ${String(55-i).padStart(2,'0')}`,i%2?'2000-01-01':'2020-01-01',ids.admin])).rows[0]);
+    }
+    const get=async(sort,offset=0,archived=false)=>(await db.query("select id,label,date_added from public.search_reference_index('SORT_TEST','control-systems','consoles',$1,$2,$3)",[archived,offset,sort])).rows;
+    for(const sort of ['title-asc','title-desc','newest','oldest']) {
+      const expected=[...rows].sort((a,b)=>{
+        const title=a.label.trim().toLowerCase().localeCompare(b.label.trim().toLowerCase());
+        const date=new Date(a.date_added)-new Date(b.date_added);
+        return (sort==='newest'?-date:sort==='oldest'?date:0)||(sort==='title-desc'?-title:title)||a.id.localeCompare(b.id);
+      });
+      const actual=[...(await get(sort)).slice(0,50),...await get(sort,50)];
+      assert.deepEqual(actual.map(r=>r.id),expected.map(r=>r.id));
+    }
+    assert.deepEqual((await get('bad')).map(r=>r.id),(await get('title-asc')).map(r=>r.id));
+    await db.query("update public.link_items set status='archived' where description='SORT_TEST'");
+    assert.equal((await get('oldest')).length,0);
+    assert.equal((await get('oldest',0,true)).length,51);
+    await as('pending');assert.equal((await get('title-asc')).length,0);
+    await db.exec('reset role; set role anon');
+    await assert.rejects(()=>get('title-asc'),e=>e.code==='42501');
+    await db.exec('reset role');await db.query("delete from public.link_items where description='SORT_TEST'");
+  });
   it("lets active members supply only their own public name without changing role or exposing private fields",async()=>{
     await as('viewer');
     await db.query("select public.set_directory_display_name($1)",['  Mike Grabowski  ']);

@@ -1,5 +1,13 @@
 # Directory names, Reference views, and private-portal follow-up
 
+## Reference sorting addendum
+
+`202609140005_reference_index_sort.sql` adds a separate SECURITY INVOKER index RPC, explicitly authenticated-only, leaving global search's existing RPC unchanged. Filtering and search predicates are preserved; ordering happens before the 51-row pagination window. Title sorts use trimmed lowercase titles then UUID; date sorts use only date_added, then title/UUID. NULL dates sort last. Unknown sort values fall back to Title A–Z.
+
+The compact GET form beside Card/List offers Title A–Z (default), Title Z–A, Newest added and Oldest added. Apply updates the URL, preserves query/collection/subcollection/archive and resets pagination; pagination/search/navigation retain sort. Browser Back/Forward and reload use URL state. Card/List does not reorder records.
+
+Mike authorized applying both new migrations (004 and 005) after verification/read-only audit. Neither migration mutates existing content. Sorting tests span 55 records to prove ordering precedes pagination and exercise historical dates, ties, archived/collection/subcollection/search filters and anonymous/pending denial.
+
 ## Name root cause and explicit repair
 
 `social_directory()` already returns `profiles.full_name` as `display_name`; the UI passed it through. Email/password signup does not collect a name, so its new-user trigger often has no metadata name to populate. Private Travel name/details are separate and are not a valid public fallback. Do not infer names from email or copy Travel data.
