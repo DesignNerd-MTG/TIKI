@@ -4,7 +4,6 @@ import {
   Boxes,
   BookOpenText,
   ClipboardPenLine,
-  FileText,
   Link2,
   MapPinned,
   Martini,
@@ -17,7 +16,6 @@ const modules = [
   { href: "/fixtures", label: "Fixtures", description: "Modes, charts & field notes", icon: Boxes, key: "fixtures" },
   { href: "/shows", label: "Shows", description: "Files, folders & references", icon: BookOpenText, key: "shows" },
   { href: "/links", label: "Reference Hub", description: "Collections, tools & references", icon: Link2, key: "links" },
-  { href: "/documents", label: "Documents", description: "Manuals, plots & paperwork", icon: FileText, key: "documents" },
   { href: "/locations", label: "Locations", description: "Studios, restaurants & useful places", icon: MapPinned, key: "locations" },
   { href: "/drinks", label: "Drinks", description: "Cocktail recipes from the T.I.K.I. lounge", icon: Martini, key: "drinks" },
 ] as const;

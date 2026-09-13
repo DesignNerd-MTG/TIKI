@@ -3,7 +3,7 @@ import { referenceCollections } from "./references.ts";
 
 export const contentStatuses = ["draft", "submitted", "published", "archived"] as const;
 export const napkinStatuses = ["raw", "needs_review", "converted", "archived"] as const;
-export const filingDestinationKinds = ["fixture", "show", "link", "document", "location", "drink"] as const;
+export const filingDestinationKinds = ["fixture", "show", "link", "location", "drink"] as const;
 export type FilingDestinationKind = (typeof filingDestinationKinds)[number];
 
 const countryDisplayNames = new Intl.DisplayNames(["en"], { type: "region" });
@@ -120,6 +120,7 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
     ],
   },
   document: {
+    // Dormant legacy metadata for recovery and old Napkin destination resolution only.
     kind: "document", table: "documents", route: "/documents", singular: "Document", plural: "Documents",
     eyebrow: "Published knowledge", description: "A searchable index of authoritative manuals, charts, paperwork, and external document locations.",
     minimumCreateRole: "contributor", titleField: "title",

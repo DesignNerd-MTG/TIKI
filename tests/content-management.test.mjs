@@ -160,7 +160,7 @@ describe("tags, search, and record presentation", () => {
     assert.equal(getRecordMeta("location", { kind: "studio", city: "New York", region: "NY", country: "US" }), "studio · New York · NY");
     assert.equal(getRecordMeta("location", { kind: "venue", city: "London", country: "GB" }), "venue · London · United Kingdom");
     assert.equal(getRecordMeta("drink", { glassware: "Double rocks", garnish: "Mint" }), "Double rocks · Mint");
-    assert.deepEqual(filingDestinationKinds, ["fixture", "show", "link", "document", "location", "drink"]);
+    assert.deepEqual(filingDestinationKinds, ["fixture", "show", "link", "location", "drink"]);
   });
 
   it("shows complete Link Hub entries and supports date or alphabetical sorting", async () => {

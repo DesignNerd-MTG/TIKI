@@ -1,4 +1,6 @@
-import type { Metadata } from "next";
-import { ContentCreatePage } from "@/components/content-pages";
-export const metadata: Metadata = { title: "New document" };
-export default function NewDocumentPage() { return <ContentCreatePage kind="document" />; }
+import { redirect } from "next/navigation";
+import { requireActiveProfile } from "@/lib/auth";
+export default async function RetiredDocuments() {
+  await requireActiveProfile();
+  redirect("/links?collection=ldg-ldge-documents");
+}

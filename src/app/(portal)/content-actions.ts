@@ -20,7 +20,7 @@ export type ContentActionState = {
 };
 
 function isEntityKind(value: string): value is EntityKind {
-  return value in contentConfigs;
+  return value !== "document" && value in contentConfigs;
 }
 
 function isFilingDestination(value: string): value is FilingDestinationKind {

@@ -8,7 +8,7 @@ The original `supabase/migrations/202609130001_reference_hub.sql` has already be
 
 The new forward migration `supabase/migrations/202609130002_ldg_documents_collection.sql` adds **LDG / LDGE Documents** (`ldg-ldge-documents`) as a top-level collection, bringing the current taxonomy to **11 top-level collections and three subcollections**. Its description is: “Internal company documents, forms, policies, templates, handbooks, and shared operational resources.” It is transactional and idempotent (`ON CONFLICT (id) DO NOTHING`), preserves existing taxonomy/content, and changes no permissions. Apply it before deploying the updated application; it has not been applied to production in this change. Leave the additive collection in place on application rollback, especially if references use it.
 
-This collection indexes links to canonical internal LDG/LDGE resources. The existing **TIKI Documents module remains separate and unchanged**; this collection does not replace it or introduce file storage.
+This collection indexes links to canonical internal LDG/LDGE resources. The Documents-retirement follow-up consolidates the legacy Documents module here; see [DOCUMENTS-CONSOLIDATION.md](DOCUMENTS-CONSOLIDATION.md) for preservation, migration, and rollback requirements. No file storage is introduced.
 
 The migration is transactional and additive:
 

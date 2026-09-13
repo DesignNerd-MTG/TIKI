@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Boxes, BookOpenText, Building2, ClipboardPenLine, FileText, Link2, MapPinned, Martini, PlaneTakeoff, Search, Tags } from "lucide-react";
+import { Boxes, BookOpenText, Building2, ClipboardPenLine, Link2, MapPinned, Martini, PlaneTakeoff, Search, Tags } from "lucide-react";
 
 import { EmptyState, PageHeader, RecordList } from "@/components/ui";
 import { contentConfigs, getCountryLabel, getStatusLabel } from "@/lib/content";
@@ -26,23 +26,21 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     const vendorRequest = profile.role === "editor" || profile.role === "admin"
       ? supabase.from("vendor_clients").select("id,name,kind,primary_contact,notes").neq("status", "archived").or(`name.ilike.${pattern},primary_contact.ilike.${pattern},notes.ilike.${pattern}`).limit(12)
       : Promise.resolve({ data: [], error: null });
-    const [fixtures, shows, documents, links, locations, drinks, vendors, napkin, travelProfiles, tagLinks] = await Promise.all([
+    const [fixtures, shows, links, locations, drinks, vendors, napkin, travelProfiles, tagLinks] = await Promise.all([
       supabase.from("fixtures").select("id,name,manufacturer,preferred_mode").neq("status", "archived").or(`name.ilike.${pattern},manufacturer.ilike.${pattern},preferred_mode.ilike.${pattern},field_notes.ilike.${pattern}`).limit(12),
       supabase.from("shows").select("id,title,job_number,client_name,location,summary,staffing_notes").neq("status", "archived").or(`title.ilike.${pattern},job_number.ilike.${pattern},client_name.ilike.${pattern},location.ilike.${pattern},summary.ilike.${pattern},staffing_notes.ilike.${pattern}`).limit(12),
-      supabase.from("documents").select("id,title,document_type,description").neq("status", "archived").or(`title.ilike.${pattern},document_type.ilike.${pattern},description.ilike.${pattern}`).limit(12),
       supabase.rpc("search_references", { search_text: query }).limit(12),
       supabase.from("locations").select("id,name,kind,address,city,region,country,notes").neq("status", "archived").or(`name.ilike.${pattern},kind.ilike.${pattern},address.ilike.${pattern},city.ilike.${pattern},region.ilike.${pattern},country.ilike.${pattern},notes.ilike.${pattern}`).limit(12),
       supabase.from("drinks").select("id,name,description,ingredients,glassware,garnish").neq("status", "archived").or(`name.ilike.${pattern},description.ilike.${pattern},ingredients.ilike.${pattern},glassware.ilike.${pattern},garnish.ilike.${pattern}`).limit(12),
       vendorRequest,
       supabase.from("napkin_notes").select("id,body,urgent,status").neq("status", "archived").or(`body.ilike.${pattern},source_url.ilike.${pattern}`).limit(12),
       supabase.from("travel_profiles").select("user_id,name").not("name", "is", null).limit(12),
-      supabase.from("content_tags").select("entity_kind,entity_id,tags!inner(name)").ilike("tags.name", pattern).limit(20),
+      supabase.from("content_tags").select("entity_kind,entity_id,tags!inner(name)").neq("entity_kind", "document").ilike("tags.name", pattern).limit(20),
     ]);
-    searchFailed = [fixtures, shows, documents, links, locations, drinks, vendors, napkin, travelProfiles, tagLinks].some((result) => Boolean(result.error));
+    searchFailed = [fixtures, shows, links, locations, drinks, vendors, napkin, travelProfiles, tagLinks].some((result) => Boolean(result.error));
     groups = [
       { label: "Fixtures", icon: Boxes, records: (fixtures.data ?? []).map((item) => ({ id: item.id, title: item.name, meta: item.manufacturer || "Fixture", detail: item.preferred_mode ? `Preferred mode: ${item.preferred_mode}` : null, href: `/fixtures/${item.id}` })) },
       { label: "Shows", icon: BookOpenText, records: (shows.data ?? []).map((item) => ({ id: item.id, title: item.title, meta: [item.job_number ? `Job ${item.job_number}` : null, item.client_name, item.location].filter(Boolean).join(" · ") || "Show", detail: item.summary || item.staffing_notes, href: `/shows/${item.id}` })) },
-      { label: "Documents", icon: FileText, records: (documents.data ?? []).map((item) => ({ id: item.id, title: item.title, meta: item.document_type || "Document", detail: item.description, href: `/documents/${item.id}` })) },
       { label: "Reference Hub", icon: Link2, records: (links.data ?? []).map((item: { id: string; label: string; category: string; description: string }) => ({ id: item.id, title: item.label, meta: item.category, detail: item.description, href: `/links/${item.id}` })) },
       { label: "Locations", icon: MapPinned, records: (locations.data ?? []).map((item) => ({ id: item.id, title: item.name, meta: [item.kind, item.city, item.region, item.country !== "US" ? getCountryLabel(item.country) : null].filter(Boolean).join(" · ") || "Useful place", detail: [item.address, item.notes].filter(Boolean).join(" · "), href: `/locations/${item.id}` })) },
       { label: "Drinks", icon: Martini, records: (drinks.data ?? []).map((item) => ({ id: item.id, title: item.name, meta: [item.glassware, item.garnish].filter(Boolean).join(" · ") || "Cocktail recipe", detail: item.description || item.ingredients, href: `/drinks/${item.id}` })) },
@@ -61,7 +59,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const resultCount = groups.reduce((total, group) => total + group.records.length, 0);
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Global search" title={query ? `Results for “${query}”` : "Search T.I.K.I."} description={query ? `${resultCount} result${resultCount === 1 ? "" : "s"} across content and tags.` : "Search fixtures, shows, documents, links, locations, drinks, travel-profile names, permitted vendor context, Napkin notes, and tags from one place."} />
+      <PageHeader eyebrow="Global search" title={query ? `Results for “${query}”` : "Search T.I.K.I."} description={query ? `${resultCount} result${resultCount === 1 ? "" : "s"} across content and tags.` : "Search fixtures, shows, links, locations, drinks, travel-profile names, permitted vendor context, Napkin notes, and tags from one place."} />
       <form className="search-page-form" action="/search" method="get"><Search size={20} /><input name="q" defaultValue={query} autoFocus placeholder="What are you looking for?" aria-label="Search query" maxLength={100} /><button className="primary-button" type="submit">Search</button></form>
       {searchFailed && <div className="notice notice--warning">Some sources could not be searched. The available results are shown below.</div>}
       {!query ? <EmptyState icon={Search} title="Start with a useful noun" description="Try a fixture name, manufacturer, show, client, document type, link category, note, or tag." /> : groups.length ? (

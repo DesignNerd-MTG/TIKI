@@ -12,11 +12,10 @@ async function getDashboardSnapshot(canSeeRestricted: boolean): Promise<{ snapsh
   const supabase = await createClient();
   const vendorCount = canSeeRestricted ? supabase.from("vendor_clients").select("id", { count: "exact", head: true }).neq("status", "archived") : Promise.resolve({ count: 0, error: null });
   const recentVendors = canSeeRestricted ? supabase.from("vendor_clients").select("id,name,kind,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(3) : Promise.resolve({ data: [] });
-  const [fixtures, shows, links, documents, locations, drinks, napkin, vendors, recentFixtures, recentShows, recentLinks, recentDocuments, recentLocations, recentDrinks, recentNapkin, vendorRecent] = await Promise.all([
+  const [fixtures, shows, links, locations, drinks, napkin, vendors, recentFixtures, recentShows, recentLinks, recentLocations, recentDrinks, recentNapkin, vendorRecent] = await Promise.all([
     supabase.from("fixtures").select("id", { count: "exact", head: true }).neq("status", "archived"),
     supabase.from("shows").select("id", { count: "exact", head: true }).neq("status", "archived"),
     supabase.from("link_items").select("id", { count: "exact", head: true }).neq("status", "archived"),
-    supabase.from("documents").select("id", { count: "exact", head: true }).neq("status", "archived"),
     supabase.from("locations").select("id", { count: "exact", head: true }).neq("status", "archived"),
     supabase.from("drinks").select("id", { count: "exact", head: true }).neq("status", "archived"),
     supabase.from("napkin_notes").select("id", { count: "exact", head: true }).neq("status", "archived"),
@@ -24,7 +23,6 @@ async function getDashboardSnapshot(canSeeRestricted: boolean): Promise<{ snapsh
     supabase.from("fixtures").select("id,name,manufacturer,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(3),
     supabase.from("shows").select("id,title,job_number,location,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(2),
     supabase.from("link_items").select("id,label,category,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(2),
-    supabase.from("documents").select("id,title,document_type,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(2),
     supabase.from("locations").select("id,name,kind,city,region,country,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(2),
     supabase.from("drinks").select("id,name,glassware,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(2),
     supabase.from("napkin_notes").select("id,body,updated_at").neq("status", "archived").order("updated_at", { ascending: false }).limit(2),
@@ -50,7 +48,6 @@ async function getDashboardSnapshot(canSeeRestricted: boolean): Promise<{ snapsh
       updatedAt: item.updated_at,
     })),
     ...(recentLinks.data ?? []).map((item) => ({ id: item.id, title: item.label, category: "Link", meta: item.category, href: `/links/${item.id}`, updatedAt: item.updated_at })),
-    ...(recentDocuments.data ?? []).map((item) => ({ id: item.id, title: item.title, category: "Document", meta: item.document_type || "Reference document", href: `/documents/${item.id}`, updatedAt: item.updated_at })),
     ...(recentLocations.data ?? []).map((item) => ({ id: item.id, title: item.name, category: "Location", meta: [item.kind, item.city, item.region, item.country !== "US" ? getCountryLabel(item.country) : null].filter(Boolean).join(" · ") || "Useful place", href: `/locations/${item.id}`, updatedAt: item.updated_at })),
     ...(recentDrinks.data ?? []).map((item) => ({ id: item.id, title: item.name, category: "Drink", meta: item.glassware || "Cocktail recipe", href: `/drinks/${item.id}`, updatedAt: item.updated_at })),
     ...(recentNapkin.data ?? []).map((item) => ({ id: item.id, title: item.body.length > 70 ? `${item.body.slice(0, 70)}…` : item.body, category: "Napkin", meta: "Working knowledge", href: `/napkin/${item.id}`, updatedAt: item.updated_at })),
@@ -64,7 +61,6 @@ async function getDashboardSnapshot(canSeeRestricted: boolean): Promise<{ snapsh
         fixtures: fixtures.count ?? 0,
         shows: shows.count ?? 0,
         links: links.count ?? 0,
-        documents: documents.count ?? 0,
         locations: locations.count ?? 0,
         drinks: drinks.count ?? 0,
         napkin: napkin.count ?? 0,
