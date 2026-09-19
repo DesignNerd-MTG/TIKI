@@ -14,6 +14,8 @@ import type { EntityKind, ManagedRecord } from "@/lib/types";
 import { checkReference } from "@/lib/reference-fetch";
 import { findSimilarManufacturers, slugifyManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
 import { napkinSketchBucket, napkinSketchPath, normalizeNapkinSketch } from "@/lib/napkin-sketch";
+import { validateShowPeople } from "@/lib/show-details";
+import { resolveShowLocation } from "@/lib/show-city-catalog";
 
 export type ContentActionState = {
   ok: boolean;
@@ -118,6 +120,11 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   const config = contentConfigs[kind];
   const id = String(formData.get("id") ?? "").trim();
   const input = readInput(formData, kind);
+  if (kind === "show") {
+    input._show_personnel = String(formData.get("_show_personnel") ?? "[]");
+    input._show_city_id = String(formData.get("_show_city_id") ?? "");
+    input._show_location_mode = String(formData.get("_show_location_mode") ?? "city");
+  }
   input._manufacturer_id = String(formData.get("manufacturer_id") ?? "").trim();
   const additionalLinks = readAdditionalLinks(formData, kind);
   const sketchFile = kind === "napkin" && !id ? formData.get("sketch") : null;
@@ -150,6 +157,13 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   if (!additionalLinks.valid) return failure("Check the additional links and try again.", { additional_links: additionalLinks.message });
 
   const payload: Record<string, unknown> = { ...validation.payload };
+  if (kind === "show") {
+    const personnel = validateShowPeople(String(input._show_personnel));
+    if (personnel.error) return failure("Check Key Personnel and try again.", { key_personnel: personnel.error });
+    const location = resolveShowLocation(String(input._show_city_id), String(input._show_location_mode), String(input.location ?? ""), existing ?? undefined);
+    if (location.error) return failure("Check Location and try again.", { location: location.error });
+    Object.assign(payload, location, { key_personnel: personnel.people });
+  }
   let sketchBytes: Uint8Array | null = null;
   if (hasNewSketch && sketchFile instanceof File) {
     try {

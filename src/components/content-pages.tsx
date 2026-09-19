@@ -21,6 +21,7 @@ import { FixtureCreate } from "@/components/fixture-create";
 import { fixtureQuickSpecs, formatFixtureWattage, formatFixtureWeight } from "@/lib/fixture-physical";
 import { NapkinSketch } from "@/components/napkin-sketch";
 import { ShareRecord } from "@/components/share-record";
+import { ShowPersonnelDetails } from "@/components/show-personnel-details";
 
 function stringify(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -247,6 +248,10 @@ export async function ContentDetailPage({
             {detailFields.map((field) => <div key={field.name}><dt>{field.label}</dt><dd>{kind === "link" && ["collection_id","subcollection_id"].includes(field.name) ? referenceCollection(record[field.name])?.name : stringify(record[field.name])}</dd></div>)}
             {!detailFields.length && <div className="compact-empty">No additional details have been recorded yet.</div>}
           </dl>
+          {kind === "show" && <>
+            {Boolean(record.legacy_location) && record.legacy_location !== record.location && <p className="show-legacy-location">Original location (preserved): {String(record.legacy_location)}</p>}
+            <ShowPersonnelDetails value={record.key_personnel} />
+          </>}
         </section>
         <section className="panel detail-panel">
           <div className="panel__heading"><div><p className="eyebrow">Source material</p><h2>Authoritative links</h2></div></div>

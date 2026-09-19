@@ -68,7 +68,8 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
     const rawValue = String(input[field.name] ?? "").trim();
     const value = field.type === "url" ? normalizeExternalUrl(rawValue) : rawValue;
     if (field.required && !value) errors[field.name] = `${field.label} is required.`;
-    if (field.maxLength && value.length > field.maxLength) errors[field.name] = `${field.label} is too long.`;
+    const unchangedLegacyShowLocation = kind === "show" && field.name === "location" && !previousRecord?.location_data && String(previousRecord?.location ?? "") === String(input.location ?? "");
+    if (field.maxLength && value.length > field.maxLength && !unchangedLegacyShowLocation) errors[field.name] = `${field.label} is too long.`;
     if (field.type === "url" && value.length > 2048) errors[field.name] = "URL must be 2,048 characters or fewer.";
     if (field.type === "url" && value && !isSafeExternalUrl(value)) errors[field.name] = "Use a valid web address or http:// or https:// URL.";
     if (field.type === "date" && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) errors[field.name] = "Use a valid date.";

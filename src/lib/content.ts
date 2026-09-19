@@ -144,6 +144,7 @@ export const contentConfigs: Record<EntityKind, ContentConfig> = {
       { name: "job_number", label: "Job number", type: "text", maxLength: 80, placeholder: "LDG job or project number" },
       { name: "client_name", label: "Client", type: "text", maxLength: 160 },
       { name: "location", label: "Location", type: "text", maxLength: 240 },
+      { name: "studio_site", label: "Studio / Site", type: "text", maxLength: 240, placeholder: "AMV 26, Santa Monica Beach…", help: "Optional venue, studio or working site; separate from the city." },
       { name: "start_date", label: "Start date", type: "date" },
       { name: "end_date", label: "End date", type: "date" },
       { name: "summary", label: "Show summary", type: "textarea", maxLength: 4000, wide: true },
@@ -255,7 +256,7 @@ export function getRecordMeta(kind: EntityKind, record: Record<string, unknown>)
   const strings = (...values: unknown[]) => values.filter((value): value is string => typeof value === "string" && value.length > 0);
   switch (kind) {
     case "fixture": return strings(record.manufacturer, record.fixture_type).join(" · ") || "Fixture details pending";
-    case "show": return strings(record.job_number ? `Job ${record.job_number}` : null, record.client_name, record.location).join(" · ") || "Show details pending";
+    case "show": return strings(record.job_number ? `Job ${record.job_number}` : null, record.client_name, record.location, record.studio_site).join(" · ") || "Show details pending";
     case "link": return typeof record.category === "string" ? record.category : "General";
     case "document": return typeof record.document_type === "string" && record.document_type ? record.document_type : "Reference document";
     case "location": return strings(record.kind, record.city, record.region, record.country && record.country !== "US" ? getCountryLabel(record.country) : null).join(" · ") || "Location details pending";

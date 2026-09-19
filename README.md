@@ -81,6 +81,9 @@ netlify.toml             Netlify build configuration
 
 Deployment path: **local development → GitHub → Netlify → Supabase**.
 
+Show personnel, normalized city selection, legacy preservation, and the required
+additive migration are documented in [docs/SHOW-PERSONNEL-LOCATIONS.md](./docs/SHOW-PERSONNEL-LOCATIONS.md).
+
 See [docs/CONTENT-MANAGEMENT.md](./docs/CONTENT-MANAGEMENT.md), [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md), and [docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md).
 
 Reference Hub collections, safe metadata checks, Social Directory, and the one-time Notion import are documented in [docs/REFERENCE-HUB.md](./docs/REFERENCE-HUB.md), including the additive migration and seven unresolved native-bookmark destinations. Existing `/links` URLs are retained.

@@ -13,6 +13,9 @@ import { flatReferenceDestinations, referenceCollection, type ReferenceCollectio
 import { ManufacturerSelector } from "@/components/manufacturer-selector";
 import type { FixtureManufacturer } from "@/lib/fixture-manufacturers";
 import { SketchPad, type SketchPadHandle } from "@/components/sketch-pad";
+import { ShowLocationEditor } from "@/components/show-location-editor";
+import { ShowPersonnelEditor } from "@/components/show-personnel-editor";
+import { readShowPeople, type ShowCity } from "@/lib/show-details";
 
 function SubmitButton({ create, label }: { create: boolean; label?: string }) {
   const { pending } = useFormStatus();
@@ -151,6 +154,11 @@ export function ContentEditor({
           const error = state.fieldErrors?.[field.name];
           const submitted = state.values && Object.hasOwn(state.values, field.name);
           const value = submitted ? state.values?.[field.name] : record ? record[field.name] : initialValues[field.name];
+          if (kind === "show" && field.name === "location") {
+            const savedCity = record?.location_data as ShowCity | null | undefined;
+            const submittedId = state.values?._show_city_id;
+            return <ShowLocationEditor key={field.name} initialText={String(value ?? "")} initialCity={submittedId === undefined || submittedId === savedCity?.id ? savedCity : null} initialId={submittedId === undefined ? undefined : String(submittedId)} initialMode={state.values?._show_location_mode === undefined ? undefined : String(state.values._show_location_mode)} legacy={String(record?.legacy_location ?? "")} error={error} />;
+          }
           if (kind === "fixture" && field.name === "manufacturer") {
             return <ManufacturerSelector key={field.name} manufacturers={manufacturers} initialId={String(state.values?._manufacturer_id ?? record?.manufacturer_id ?? initialValues.manufacturer_id ?? "")} initialName={typeof value === "string" ? value : ""} isNew={!record} canAdd={canAddManufacturer} error={error} />;
           }
@@ -194,6 +202,7 @@ export function ContentEditor({
             : fieldControl;
         })}
 
+        {kind === "show" && <ShowPersonnelEditor initialPeople={readShowPeople(state.values?._show_personnel ?? record?.key_personnel)} error={state.fieldErrors?.key_personnel} />}
         <AdditionalLinksEditor kind={kind} initialLinks={state.additionalLinks ?? additionalLinks} error={state.fieldErrors?.additional_links} />
 
         {showStatusControl ? (
