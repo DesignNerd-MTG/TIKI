@@ -21,7 +21,18 @@ import { FixtureCreate } from "@/components/fixture-create";
 import { fixtureQuickSpecs, formatFixtureWattage, formatFixtureWeight } from "@/lib/fixture-physical";
 import { NapkinSketch } from "@/components/napkin-sketch";
 import { ShareRecord } from "@/components/share-record";
+import { locationLabel, type ProductionLocation, type ShowStop } from "@/lib/show-production";
 import { ShowPersonnelDetails } from "@/components/show-personnel-details";
+
+async function loadProductionLocations(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const data: ProductionLocation[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const result = await supabase.from("locations").select("id,name,city,region,country").order("name").order("id").range(offset, offset + 499);
+    if (result.error) return { data: [], error: result.error };
+    data.push(...result.data as ProductionLocation[]);
+    if (result.data.length < 500) return { data, error: null };
+  }
+}
 
 function stringify(value: unknown) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -133,6 +144,7 @@ export async function ContentIndexPage({
         </> : <Link className={sort === "alpha" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=alpha`}>A–Z</Link>}
         {kind === "location" && <Link className={sort === "city" ? "is-active" : ""} href={`${browseRoute}?${showArchived ? "view=archived&" : ""}sort=city`}>City</Link>}
       </div>
+      {kind === "show" && <Link className="secondary-button" href="/shows/archive">Production archive / list</Link>}
       {mayReviewArchive && <Link className="secondary-button" href={showArchived ? `${browseRoute}?sort=${sort}` : `${browseRoute}?view=archived&sort=${sort}`}>{showArchived ? "Current records" : "Archived"}</Link>}
       {mayCreate && !inlineCreate && <Link className="primary-button" href={createRoute ?? `${config.route}/new`}><Plus size={16} /> {createLabel ?? `Add ${config.singular.toLowerCase()}`}</Link>}
       {config.restricted && <span className="restricted-badge"><LockKeyhole size={15} /> Editor access</span>}
@@ -166,12 +178,13 @@ export async function ContentCreatePage({ kind, initialValues }: { kind: EntityK
     ? await supabase.from("fixture_manufacturers").select("id,name,slug,active,aliases").eq("active", true).order("name")
     : { data: [], error: null };
   const manufacturers = (manufacturerResult.data ?? []) as FixtureManufacturer[];
+  const locationResult = kind === "show" ? await loadProductionLocations(supabase) : { data: [], error: null };
   return (
     <div className="page-stack">
       <Link className="back-link" href={config.route}><ArrowLeft size={16} /> Back to {config.plural.toLowerCase()}</Link>
       <PageHeader eyebrow="New record" title={`Add ${config.singular.toLowerCase()}`} description={profile.role === "admin" ? "Administrator entries publish immediately unless you choose another status." : "Start with what is known. Drafts can be refined and submitted for review later."} />
       {manufacturerResult.error && <div className="notice notice--error">The manufacturer list could not be loaded. Refresh before creating this Fixture.</div>}
-      <section className="panel editor-panel">{kind === "fixture" ? <FixtureCreate statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} /> : <ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} initialValues={initialValues} />}</section>
+      <section className="panel editor-panel">{kind === "fixture" ? <FixtureCreate statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} /> : <ContentEditor kind={kind} statuses={allowedStatuses(profile.role, kind).filter((status) => status !== "archived")} defaultStatus={profile.role === "admin" ? "published" : undefined} initialValues={initialValues} productionLocations={locationResult.data} locationsUnavailable={Boolean(locationResult.error)} />}</section>
     </div>
   );
 }
@@ -204,6 +217,10 @@ export async function ContentDetailPage({
       : Promise.resolve({ data: [], error: null }),
     kind === "napkin" ? supabase.from("reference_collections").select("id,name,parent_id") : Promise.resolve({data:[],error:null}),
   ]);
+  const locationResult = kind === "show" ? await loadProductionLocations(supabase) : { data: [], error: null };
+  const stopsResult = kind === "show" ? await supabase.from("show_stops").select("location_id,start_date,end_date").eq("show_id", id).order("position") : { data: [], error: null };
+  const showStops = (stopsResult.data ?? []).map((s) => ({ ...s, start_date: s.start_date ?? "", end_date: s.end_date ?? "" })) as ShowStop[];
+  const primaryLocation = locationResult.data.find((l) => l.id === record.primary_location_id);
   const additionalLinks = (additionalLinksResult.data ?? []) as AdditionalLink[];
   const manufacturers = (manufacturerResult.data ?? []) as FixtureManufacturer[];
   const mayEdit = canEditContent(profile.role, identity.id, kind, record);
@@ -250,6 +267,10 @@ export async function ContentDetailPage({
           </dl>
           {kind === "show" && <>
             {Boolean(record.legacy_location) && record.legacy_location !== record.location && <p className="show-legacy-location">Original location (preserved): {String(record.legacy_location)}</p>}
+            <section aria-label="Production locations"><h3>Production locations</h3>
+              {primaryLocation ? <p>Primary: <Link href={`/locations/${primaryLocation.id}`}>{locationLabel(primaryLocation)}</Link></p> : <p className="compact-empty">{record.primary_location_id ? "Primary Location unavailable." : "No Primary Location linked yet."}</p>}
+              {stopsResult.error || locationResult.error ? <DatabaseNotice /> : <ol>{showStops.map((stop, index) => { const location = locationResult.data.find((l) => l.id === stop.location_id); return <li key={index}>{location ? <Link href={`/locations/${location.id}`}>{locationLabel(location)}</Link> : "Location unavailable"}{stop.start_date && ` · ${formatDate(stop.start_date)}`}{stop.end_date && ` – ${formatDate(stop.end_date)}`}</li>; })}</ol>}
+            </section>
             <ShowPersonnelDetails value={record.key_personnel} />
           </>}
         </section>
@@ -271,11 +292,11 @@ export async function ContentDetailPage({
         </div>
       </section>
 
-      {mayEdit ? (
+      {mayEdit && (stopsResult.error || locationResult.error) ? <DatabaseNotice /> : mayEdit ? (
         <section className="panel editor-panel" id="edit-record">
           <div className="panel__heading"><div><p className="eyebrow">Role-aware controls</p><h2>Edit {config.singular.toLowerCase()}</h2></div></div>
           {manufacturerResult.error && <div className="notice notice--error">The manufacturer list could not be loaded. Refresh before editing this Fixture.</div>}
-          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} additionalLinks={additionalLinks} adminCanPublishWithoutRevision={profile.role === "admin"} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} />
+          <ContentEditor key={`${record.id}:${record.updated_at}`} kind={kind} record={record} tags={tags} statuses={allowedStatuses(profile.role, kind)} additionalLinks={additionalLinks} adminCanPublishWithoutRevision={profile.role === "admin"} manufacturers={manufacturers} canAddManufacturer={canAddFixtureManufacturer(profile.role)} productionLocations={locationResult.data} showStops={showStops} locationsUnavailable={Boolean(locationResult.error)} />
         </section>
       ) : (
         <div className="notice notice--neutral">This record is read-only for your current role.</div>

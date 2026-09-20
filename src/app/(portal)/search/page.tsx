@@ -27,7 +27,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       : Promise.resolve({ data: [], error: null });
     const [fixtures, shows, links, locations, drinks, vendors, napkin, tagLinks] = await Promise.all([
       supabase.rpc("search_fixtures", { search_text: query }).neq("status", "archived").limit(12),
-      supabase.from("shows").select("id,title,job_number,client_name,location,studio_site,summary,staffing_notes").neq("status", "archived").or(`title.ilike.${pattern},job_number.ilike.${pattern},client_name.ilike.${pattern},location.ilike.${pattern},studio_site.ilike.${pattern},legacy_location.ilike.${pattern},summary.ilike.${pattern},staffing_notes.ilike.${pattern}`).limit(12),
+      supabase.from("show_production_history").select("id,title,job_number,client_name,location,studio_site,summary,staffing_notes").neq("status", "archived").ilike("search_text", pattern).limit(12),
       supabase.rpc("search_references", { search_text: query }).limit(12),
       supabase.from("locations").select("id,name,kind,address,city,region,country,notes").neq("status", "archived").or(`name.ilike.${pattern},kind.ilike.${pattern},address.ilike.${pattern},city.ilike.${pattern},region.ilike.${pattern},country.ilike.${pattern},notes.ilike.${pattern}`).limit(12),
       supabase.from("drinks").select("id,name,description,ingredients,glassware,garnish").neq("status", "archived").or(`name.ilike.${pattern},description.ilike.${pattern},ingredients.ilike.${pattern},glassware.ilike.${pattern},garnish.ilike.${pattern}`).limit(12),

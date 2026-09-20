@@ -13,6 +13,8 @@ import { flatReferenceDestinations, referenceCollection, type ReferenceCollectio
 import { ManufacturerSelector } from "@/components/manufacturer-selector";
 import type { FixtureManufacturer } from "@/lib/fixture-manufacturers";
 import { SketchPad, type SketchPadHandle } from "@/components/sketch-pad";
+import { ShowProductionEditor } from "@/components/show-production-editor";
+import { readShowStops, type ProductionLocation, type ShowStop } from "@/lib/show-production";
 import { ShowLocationEditor } from "@/components/show-location-editor";
 import { ShowPersonnelEditor } from "@/components/show-personnel-editor";
 import { readShowPeople, type ShowCity } from "@/lib/show-details";
@@ -41,6 +43,8 @@ function useFailureFocus(state: ContentActionState) {
       const errorRegion = form?.querySelector<HTMLElement>(`[data-error-name="${firstName}"]`);
       const control = namedControl ?? errorRegion?.querySelector<HTMLElement>("input:not([type='hidden']), textarea, select, button, [tabindex]") ?? form?.querySelector<HTMLElement>("[aria-invalid='true']");
       if (control instanceof HTMLElement) {
+        let ancestor = control.parentElement;
+        while (ancestor) { if (ancestor instanceof HTMLDetailsElement) ancestor.open = true; ancestor = ancestor.parentElement; }
         control.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
         control.focus({ preventScroll: true });
       }
@@ -118,6 +122,9 @@ export function ContentEditor({
   manufacturers = [],
   canAddManufacturer = false,
   initialValues = {},
+  productionLocations = [],
+  showStops = [],
+  locationsUnavailable = false,
 }: {
   kind: EntityKind;
   record?: ManagedRecord | null;
@@ -129,6 +136,9 @@ export function ContentEditor({
   manufacturers?: FixtureManufacturer[];
   canAddManufacturer?: boolean;
   initialValues?: Record<string, string | number | null>;
+  productionLocations?: ProductionLocation[];
+  showStops?: ShowStop[];
+  locationsUnavailable?: boolean;
 }) {
   const config = contentConfigs[kind];
   const [collection, setCollection] = useState(String(record?.collection_id ?? initialValues.collection_id ?? "unsorted"));
@@ -144,13 +154,7 @@ export function ContentEditor({
     if (state.ok && state.redirectTo) router.push(state.redirectTo);
     else if (state.ok) router.refresh();
   }, [router, state]);
-  return (
-    <form ref={formRef} key={state.submissionKey ?? "initial"} action={action} className="content-form" noValidate>
-      <input type="hidden" name="_entity_kind" value={kind} />
-      {record && <input type="hidden" name="id" value={record.id} />}
-      {state.message && <div className={`notice ${state.ok ? "notice--success" : "notice--error"}`} role="status">{state.message}</div>}
-      <div className="content-form__grid">
-        {config.fields.map((field, index) => {
+  const fieldControls = config.fields.map((field, index) => {
           const error = state.fieldErrors?.[field.name];
           const submitted = state.values && Object.hasOwn(state.values, field.name);
           const value = submitted ? state.values?.[field.name] : record ? record[field.name] : initialValues[field.name];
@@ -200,7 +204,20 @@ export function ContentEditor({
           return kind === "napkin" && !record && field.name === "source_url"
             ? <div className="napkin-capture__link-sketch" data-error-name={state.fieldErrors?.sketch ? "sketch" : undefined} key={field.name}>{fieldControl}<SketchPad ref={sketchPadRef} embedded inputName="sketch" onMeaningfulChange={setHasSketch} />{state.fieldErrors?.sketch && <small className="field-error">{state.fieldErrors.sketch}</small>}</div>
             : fieldControl;
-        })}
+        });
+  return (
+    <form ref={formRef} key={state.submissionKey ?? "initial"} action={action} className="content-form" noValidate>
+      <input type="hidden" name="_entity_kind" value={kind} />
+      {record && <input type="hidden" name="id" value={record.id} />}
+      {state.message && <div className={`notice ${state.ok ? "notice--success" : "notice--error"}`} role="status">{state.message}</div>}
+      <div className="content-form__grid">
+        {kind === "show" ? <>
+          {fieldControls.filter((_, i) => ["title", "job_number", "client_name", "start_date", "end_date"].includes(config.fields[i].name))}
+          <details className="additional-links form-field--wide" open={Boolean(state.fieldErrors?.producer || state.fieldErrors?.network_brand || state.fieldErrors?.google_photos_url || state.fieldErrors?.summary)}><summary>Production history &amp; memories</summary><div className="content-form__grid">{fieldControls.filter((_, i) => ["producer", "network_brand", "google_photos_url", "summary"].includes(config.fields[i].name))}</div></details>
+          <ShowProductionEditor locations={productionLocations} primaryId={String(state.values?.primary_location_id ?? record?.primary_location_id ?? "")} initialStops={state.values?._show_stops === undefined ? showStops : readShowStops(state.values._show_stops)} error={state.fieldErrors?.show_locations} unavailable={locationsUnavailable} />
+          {Boolean(record?.location || record?.studio_site || record?.legacy_location) && <details className="additional-links form-field--wide" open={Boolean(state.fieldErrors?.location || state.fieldErrors?.studio_site)}><summary>Existing city / site information</summary><p className="form-intro">Preserved from this Show. Use canonical Locations above for production history.</p><div className="content-form__grid">{fieldControls.filter((_, i) => ["location", "studio_site"].includes(config.fields[i].name))}</div></details>}
+          <details className="additional-links form-field--wide" open={Boolean(state.fieldErrors?.dropbox_url || state.fieldErrors?.egnyte_url || state.fieldErrors?.staffing_notes || state.fieldErrors?.staffing_calendar_url)}><summary>Working files &amp; staffing</summary><div className="content-form__grid">{fieldControls.filter((_, i) => ["dropbox_url", "egnyte_url", "staffing_notes", "staffing_calendar_url"].includes(config.fields[i].name))}</div></details>
+        </> : fieldControls}
 
         {kind === "show" && <ShowPersonnelEditor initialPeople={readShowPeople(state.values?._show_personnel ?? record?.key_personnel)} error={state.fieldErrors?.key_personnel} />}
         <AdditionalLinksEditor kind={kind} initialLinks={state.additionalLinks ?? additionalLinks} error={state.fieldErrors?.additional_links} />

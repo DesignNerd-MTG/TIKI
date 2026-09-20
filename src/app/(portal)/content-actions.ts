@@ -14,6 +14,7 @@ import type { EntityKind, ManagedRecord } from "@/lib/types";
 import { checkReference } from "@/lib/reference-fetch";
 import { findSimilarManufacturers, slugifyManufacturer, type FixtureManufacturer } from "@/lib/fixture-manufacturers";
 import { napkinSketchBucket, napkinSketchPath, normalizeNapkinSketch } from "@/lib/napkin-sketch";
+import { validateShowStops } from "@/lib/show-production";
 import { validateShowPeople } from "@/lib/show-details";
 import { resolveShowLocation } from "@/lib/show-city-catalog";
 
@@ -121,6 +122,8 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   const id = String(formData.get("id") ?? "").trim();
   const input = readInput(formData, kind);
   if (kind === "show") {
+    input.primary_location_id = String(formData.get("primary_location_id") ?? "");
+    input._show_stops = String(formData.get("_show_stops") ?? "[]");
     input._show_personnel = String(formData.get("_show_personnel") ?? "[]");
     input._show_city_id = String(formData.get("_show_city_id") ?? "");
     input._show_location_mode = String(formData.get("_show_location_mode") ?? "city");
@@ -158,6 +161,16 @@ export async function saveContentAction(_previous: ContentActionState, formData:
 
   const payload: Record<string, unknown> = { ...validation.payload };
   if (kind === "show") {
+    const stops = validateShowStops(String(input._show_stops));
+    if (stops.error) return failure("Check production locations.", { show_locations: stops.error });
+    const primaryId = String(input.primary_location_id);
+    if (primaryId && !isUuid(primaryId)) return failure("Check production locations.", { show_locations: "Choose a valid Primary Location." });
+    const locationIds = [...new Set([primaryId, ...stops.stops.map((stop) => stop.location_id)].filter(Boolean))];
+    if (locationIds.length) {
+      const choices = await supabase.from("locations").select("id").in("id", locationIds);
+      if (choices.error || choices.data?.length !== locationIds.length) return failure("Check production locations.", { show_locations: "One or more Locations are unavailable. Refresh and choose again." });
+    }
+    payload.primary_location_id = primaryId || null;
     const personnel = validateShowPeople(String(input._show_personnel));
     if (personnel.error) return failure("Check Key Personnel and try again.", { key_personnel: personnel.error });
     const location = resolveShowLocation(String(input._show_city_id), String(input._show_location_mode), String(input.location ?? ""), existing ?? undefined);
@@ -209,7 +222,9 @@ export async function saveContentAction(_previous: ContentActionState, formData:
     if (upload.error) return failure(`The sketch could not be stored. ${upload.error.message}`, { sketch: "Try drawing or storing the sketch again." });
   }
 
-  const result = existing
+  const result = kind === "show"
+    ? await supabase.rpc("save_show_production", { target_id: existing?.id ?? null, fields: payload, stops: validateShowStops(String(input._show_stops)).stops }).single<{ id: string }>()
+    : existing
     ? await supabase.from(config.table).update(payload).eq("id", existing.id).select("id").single()
     : await supabase.from(config.table).insert(payload).select("id").single();
   if (result.error || !result.data) {
@@ -234,6 +249,7 @@ export async function saveContentAction(_previous: ContentActionState, formData:
   }
 
   revalidatePath(config.route);
+  if (kind === "show") revalidatePath("/shows/archive");
   if (kind === "napkin") {
     revalidatePath("/napkin/pile");
     revalidatePath("/napkin/queue");

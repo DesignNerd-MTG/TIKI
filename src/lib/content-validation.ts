@@ -1,3 +1,4 @@
+import { isGooglePhotosUrl } from "./show-production.ts";
 import { contentConfigs } from "./content.ts";
 import { validFixtureWattage, validFixtureWeight } from "./fixture-physical.ts";
 import { canSetStatus } from "./content-rules.ts";
@@ -117,6 +118,7 @@ export function validateContentInput(kind: EntityKind, role: AppRole, input: Con
   }
 
   if (kind === "show") {
+    if (!isGooglePhotosUrl(String(payload.google_photos_url ?? ""))) errors.google_photos_url = "Use a Google Photos album link (photos.google.com or photos.app.goo.gl).";
     const start = String(input.start_date ?? "");
     const end = String(input.end_date ?? "");
     if (start && end && end < start) errors.end_date = "End date must be on or after the start date.";

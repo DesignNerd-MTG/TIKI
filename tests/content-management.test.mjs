@@ -396,8 +396,12 @@ describe("Supabase RLS migration", () => {
   it("excludes private Travel profiles from global search", async () => {
     const search = await readFile(new URL("../src/app/(portal)/search/page.tsx", import.meta.url), "utf8");
     assert.match(search, /rpc\("search_fixtures"/);
-    assert.match(search, /from\("shows"\)/);
-    assert.match(search, /staffing_notes\.ilike/);
+    assert.match(search, /from\("show_production_history"\)/);
+    assert.match(search, /ilike\("search_text", pattern\)/);
+    const history = await readFile(new URL("../supabase/migrations/202609200001_show_production_archive.sql", import.meta.url), "utf8");
+    assert.match(history, /security_invoker=true/);
+    assert.match(history, /s\.staffing_notes/);
+    assert.doesNotMatch(history, /travel_profiles/);
     assert.doesNotMatch(search, /from\("travel_profiles"\)/);
     assert.doesNotMatch(search, /(details|flighty_url)\.ilike/i);
     assert.equal(matchesTravelProfileName("Mike Grabowski", "Mike Grabowski Travel Prefs"), true);
